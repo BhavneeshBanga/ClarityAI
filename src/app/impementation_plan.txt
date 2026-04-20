@@ -1,0 +1,32 @@
+Production-Ready Roadmap + Streaming
+To elevate ClarityAI from a working prototype into a robust, production-ready SaaS, we need to focus on security, persistence, cost-control, and user experience (UX).
+
+Milestone 1: UX & Text Streaming (Current)
+See original streaming plan below.
+
+Stream Generation: Convert the /api/chat route and useChat hook to parse real-time SSE stream chunks, matching the ChatGPT experience.
+Graceful Rendering: Render text immediately but hide CHOICES and delay the FinalReport component injection until the JSON streaming completely finishes to prevent application crashes.
+Milestone 2: Security & Rate Limiting
+Right now, anyone who finds your URL can send infinite requests to your /api/chat endpoint and drain your Sarvam AI credits.
+
+Rate-limiter: Implement Redis-based rate limiting (e.g., Upstash) limiting users to 'X' messages per hour per IP.
+API Key Hardening: Ensure backend headers explicitly deny CORS requests from unverified domains.
+Milestone 3: Authentication & Persistence
+Currently, sessions are entirely ephemeral (lost on refresh) or tied to browser localStorage.
+
+Auth System: Integrate NextAuth (Auth.js) or Clerk for quick email/Google logins.
+Database Architecture: Spin up a PostgreSQL database (using an ORM like Prisma or Drizzle) to securely save users' Chat Histories, allowing them to resume old "Recent" sessions reliably from any device.
+Milestone 4: Resilience & Validation
+LLM Output Validation: The Final Report relies on the AI consistently outputting perfect JSON. In production, models sometimes hallucinate text outside the JSON block. We should implement Zod schema validation or a fallback json-repair library so the UI never crashes on malformed reports.
+Error Boundaries: Wrap the React tree in an ErrorBoundary to catch random faults smoothly.
+Phase 1: Streaming Implementation Specifics
+Backend Proxy (src/app/api/chat/route.ts & lib/sarvam.ts)
+[MODIFY] lib/sarvam.ts: Update the configuration to enable stream: true. Return the raw ReadableStream from the fetch request.
+[MODIFY] src/app/api/chat/route.ts: Route will return a new Response(stream) natively, piping the stream directly to the client.
+Frontend Hook (hooks/useChat.ts)
+[MODIFY] hooks/useChat.ts:
+Utilize the native JavaScript fetch API to read from the continuous stream.
+Dynamically concatenate standard text but mask interactive choices and JSON objects until the stream signifies completion ([DONE]).
+Open Questions for the User
+Do you want to knock out the Text Streaming feature first (Milestone 1) before worrying about databases and auth?
+If we start moving toward database persistence (Milestone 3), do you have a preferred Database ORM (e.g. Prisma, Drizzle, Supabase)?
