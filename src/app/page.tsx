@@ -45,6 +45,7 @@ export default function Page() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.nativeEvent.isComposing) return;
       e.preventDefault();
       handleSend();
     }
@@ -73,15 +74,25 @@ export default function Page() {
         </div>
 
         {/* New session */}
-        <div className="px-3 mb-3">
+        <div className="px-3 mb-3 flex flex-col gap-2">
           <button
-            onClick={newSession}
+            onClick={() => newSession('standard')}
             className="w-full flex items-center gap-2 rounded-lg border border-[#e0e0e0] bg-white px-3 py-2 text-[12.5px] text-[#555] hover:bg-[#f5f5f5] transition-colors"
           >
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
               <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
             New session
+          </button>
+          
+          <button
+            onClick={() => newSession('mcq')}
+            className="w-full flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-[12.5px] font-medium text-indigo-700 hover:bg-indigo-100/50 hover:border-indigo-300 transition-colors"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            New MCQ session
           </button>
         </div>
 

@@ -20,6 +20,7 @@ export interface Session {
   questionCount: number;     // # of AI questions asked (not counting welcome)
   totalQuestions: number;    // max cap (20)
   category: string;
+  mode: 'standard' | 'mcq';
   createdAt: number;
 }
 

@@ -95,8 +95,16 @@ export default function MCQInput({ choices, allowCustom, onSelect, disabled }: P
             value={customText}
             onChange={(e) => setCustomText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') handleCustomSubmit();
-              if (e.key === 'Escape') { setShowCustom(false); setCustomText(''); }
+              if (e.key === 'Enter') {
+                if (e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                handleCustomSubmit();
+              }
+              if (e.key === 'Escape') { 
+                e.preventDefault();
+                setShowCustom(false); 
+                setCustomText(''); 
+              }
             }}
             placeholder="Type your answer..."
             className="

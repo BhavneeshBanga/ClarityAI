@@ -1,14 +1,16 @@
 import { callSarvamStream } from '@/lib/sarvam';
-import { buildSystemPrompt } from '@/lib/prompts';
+import { buildSystemPrompt, buildMCQSystemPrompt } from '@/lib/prompts';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { messages, questionCount } = await req.json();
+    const { messages, questionCount, mode } = await req.json();
 
     // Build a dynamic system prompt that tells the LLM exactly how many
     // questions it has asked already — critical for smart early wrap-up
-    const systemPrompt = buildSystemPrompt(questionCount ?? 0);
+    const systemPrompt = mode === 'mcq' 
+      ? buildMCQSystemPrompt(questionCount ?? 0)
+      : buildSystemPrompt(questionCount ?? 0);
 
     const sarvamMessages = [
       { role: 'system' as const, content: systemPrompt },

@@ -62,7 +62,7 @@ function countQuestions(messages: Message[]): number {
 
 // ─── Initial session factory ────────────────────────────────────────────────
 
-function makeSession(): Session {
+function makeSession(mode: 'standard' | 'mcq' = 'standard'): Session {
   return {
     id: nanoid(),
     title: 'New Session',
@@ -78,6 +78,7 @@ function makeSession(): Session {
     questionCount: 0,
     totalQuestions: 20,
     category: '',
+    mode,
     createdAt: Date.now(),
   };
 }
@@ -129,6 +130,7 @@ export function useChat() {
             messages: apiMessages,
             // Tell the LLM how many questions it has already asked
             questionCount: session.questionCount,
+            mode: session.mode,
           }),
         });
 
@@ -257,8 +259,8 @@ export function useChat() {
     [session, loading]
   );
 
-  const newSession = useCallback(() => {
-    setSession(makeSession());
+  const newSession = useCallback((mode: 'standard' | 'mcq' = 'standard') => {
+    setSession(makeSession(mode));
   }, []);
 
   return { session, loading, sendMessage, newSession };
