@@ -1,9 +1,9 @@
 'use client';
 
 import { FinalReport as FinalReportType } from '@/lib/types';
-import { Outfit } from 'next/font/google';
+import { Inter } from 'next/font/google';
 
-const outfit = Outfit({ subsets: ['latin'], display: 'swap' });
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 interface Props {
   content: string;
@@ -25,10 +25,10 @@ export default function FinalReport({ content }: Props) {
 
   if (!report) {
     return (
-      <div className={`p-5 bg-red-50/50 border border-red-100 rounded-xl space-y-3 ${outfit.className}`}>
+      <div className={`p-5 bg-red-50/50 border border-red-100 rounded-xl space-y-3 ${inter.className}`}>
         <h3 className="text-red-800 font-semibold text-sm">Formatting Error</h3>
         <p className="text-sm text-red-600/80">
-          The AI generated an assessment, but it wasn't formatted correctly. Raw response:
+          The AI generated an assessment, but it wasn&apos;t formatted correctly. Raw response:
         </p>
         <div className="bg-white border border-red-100 rounded-lg p-4 max-h-[400px] overflow-auto">
           <pre className="text-[13px] text-[#222] whitespace-pre-wrap leading-relaxed">
@@ -42,7 +42,7 @@ export default function FinalReport({ content }: Props) {
   const score = Math.min(10, Math.max(1, report.score || 5));
 
   return (
-    <div className={`relative mt-4 border border-gray-200/60 rounded-[28px] p-6 sm:p-10 space-y-10 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] ${outfit.className} text-[#111]`}>
+    <div className={`relative mt-4 border border-gray-200/60 rounded-[28px] p-6 sm:p-10 space-y-10 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] ${inter.className} text-[#111]`}>
       
       {/* Subtle shine effect */}
       <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/80 to-transparent pointer-events-none" />

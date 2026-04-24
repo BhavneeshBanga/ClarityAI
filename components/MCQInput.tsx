@@ -2,128 +2,183 @@
 
 import { useState } from 'react';
 
-interface Props {
+interface MCQInputProps {
   choices: string[];
   allowCustom: boolean;
-  onSelect: (value: string) => void;
-  disabled: boolean;
+  onSelect: (choice: string, index: number) => void;
+  disabled?: boolean;
+  locked?: boolean;         // When true, all buttons become non-interactive
+  selectedIndex?: number;   // Which choice was picked (highlights it, greys others)
 }
 
-/**
- * MCQInput renders clickable choice pills.
- * The last option (if allowCustom) becomes a text-input toggle instead.
- */
-export default function MCQInput({ choices, allowCustom, onSelect, disabled }: Props) {
-  const [showCustom, setShowCustom] = useState(false);
+export default function MCQInput({
+  choices,
+  allowCustom,
+  onSelect,
+  disabled = false,
+  locked = false,
+  selectedIndex,
+}: MCQInputProps) {
+  const [customMode, setCustomMode] = useState(false);
   const [customText, setCustomText] = useState('');
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const mainChoices = allowCustom ? choices.slice(0, -1) : choices;
-  const customLabel = allowCustom ? choices[choices.length - 1] : null;
+  const isInteractive = !disabled && !locked;
 
-  const handleChoice = (choice: string) => {
-    if (!disabled) onSelect(choice);
+  // If locked and custom mode was active, collapse it
+  const showCustomInput = customMode && isInteractive;
+
+  const handleChoiceClick = (choice: string, idx: number) => {
+    if (!isInteractive) return;
+
+    // Last item is "Other" when allowCustom is true
+    const isOther = allowCustom && idx === choices.length - 1;
+    if (isOther) {
+      setCustomMode(true);
+      return;
+    }
+
+    onSelect(choice, idx);
   };
 
   const handleCustomSubmit = () => {
-    if (customText.trim() && !disabled) {
-      onSelect(customText.trim());
-      setCustomText('');
-      setShowCustom(false);
-    }
+    if (!customText.trim()) return;
+    onSelect(customText.trim(), choices.length - 1);
+    setCustomMode(false);
+    setCustomText('');
   };
 
   return (
-    <div className="mt-2.5 flex flex-col gap-1.5">
-      {/* Main choices */}
-      {mainChoices.map((choice, i) => (
-        <button
-          key={i}
-          onClick={() => handleChoice(choice)}
-          disabled={disabled}
-          className="
-            text-left border border-[#ddd] rounded-xl px-4 py-2.5
-            text-[13px] text-[#333] bg-white
-            hover:border-[#6b6ef9] hover:text-[#5254cc] hover:bg-[#f8f8ff]
-            active:scale-[0.98]
-            transition-all duration-150
-            disabled:opacity-40 disabled:cursor-not-allowed
-            flex items-center gap-2.5 group
-          "
-        >
-          <span className="
-            w-5 h-5 rounded-full border border-[#ddd] flex items-center justify-center
-            text-[10px] font-bold text-[#aaa]
-            group-hover:border-[#6b6ef9] group-hover:text-[#6b6ef9]
-            transition-colors shrink-0
-          ">
-            {String.fromCharCode(65 + i)}
-          </span>
-          {choice}
-        </button>
-      ))}
+    <div className="mt-3 space-y-2">
+      {/* Choice buttons */}
+      <div className="flex flex-wrap gap-2">
+        {choices.map((choice, idx) => {
+          const isOther = allowCustom && idx === choices.length - 1;
+          const isSelected = selectedIndex === idx;
+          const isNotSelected = selectedIndex !== undefined && !isSelected;
 
-      {/* Custom input toggle */}
-      {customLabel && !showCustom && (
-        <button
-          onClick={() => setShowCustom(true)}
-          disabled={disabled}
-          className="
-            text-left border border-dashed border-[#ccc] rounded-xl px-4 py-2.5
-            text-[13px] text-[#888] bg-white
-            hover:border-[#6b6ef9] hover:text-[#5254cc] hover:bg-[#f8f8ff]
-            transition-all duration-150
-            disabled:opacity-40 disabled:cursor-not-allowed
-            flex items-center gap-2.5
-          "
-        >
-          <span className="
-            w-5 h-5 rounded-full border border-dashed border-[#ccc] flex items-center justify-center
-            text-[10px] font-bold
-          ">
-            ✎
-          </span>
-          {customLabel}
-        </button>
-      )}
+          let buttonClass =
+            'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12.5px] font-medium border transition-all duration-200 ';
 
-      {/* Custom text input */}
-      {showCustom && (
-        <div className="flex gap-2 mt-1">
+          if (locked) {
+            if (isSelected) {
+              // Highlighted selected state
+              buttonClass +=
+                'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200/50 cursor-default';
+            } else {
+              // Greyed out non-selected state
+              buttonClass +=
+                'bg-gray-50 border-gray-150 text-gray-350 cursor-default opacity-40';
+            }
+          } else if (disabled) {
+            buttonClass += 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed opacity-60';
+          } else if (isOther) {
+            buttonClass +=
+              customMode
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                : 'bg-white border-dashed border-gray-300 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 cursor-pointer';
+          } else {
+            buttonClass +=
+              hoveredIndex === idx
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700 cursor-pointer shadow-sm'
+                : 'bg-white border-gray-200 text-gray-600 hover:border-indigo-200 hover:bg-indigo-50/30 hover:text-indigo-600 cursor-pointer';
+          }
+
+          return (
+            <button
+              key={idx}
+              onClick={() => handleChoiceClick(choice, idx)}
+              onMouseEnter={() => !locked && !disabled && setHoveredIndex(idx)}
+              onMouseLeave={() => setHoveredIndex(null)}
+              disabled={locked || disabled}
+              className={buttonClass}
+              style={{ transition: 'all 0.18s ease' }}
+            >
+              {/* Checkmark icon for selected locked button */}
+              {locked && isSelected && (
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  className="shrink-0"
+                >
+                  <polyline
+                    points="2 6 5 9 10 3"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+
+              {/* Other icon */}
+              {isOther && !locked && (
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  className="shrink-0 opacity-60"
+                >
+                  <path
+                    d="M6 1v10M1 6h10"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              )}
+
+              {choice}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Custom text input — only shown when "Other" is clicked */}
+      {showCustomInput && (
+        <div className="flex gap-2 mt-2 animate-fade-in-up">
           <input
             autoFocus
             type="text"
             value={customText}
             onChange={(e) => setCustomText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (e.nativeEvent.isComposing) return;
-                e.preventDefault();
-                handleCustomSubmit();
-              }
-              if (e.key === 'Escape') { 
-                e.preventDefault();
-                setShowCustom(false); 
-                setCustomText(''); 
+              if (e.key === 'Enter') handleCustomSubmit();
+              if (e.key === 'Escape') {
+                setCustomMode(false);
+                setCustomText('');
               }
             }}
-            placeholder="Type your answer..."
-            className="
-              flex-1 border border-[#6b6ef9] rounded-lg px-3 py-2
-              text-[13px] text-[#333] outline-none
-              focus:ring-2 focus:ring-[#6b6ef9]/20
-            "
+            placeholder="Describe your situation…"
+            className="flex-1 border border-indigo-200 rounded-lg px-3 py-2 text-[13px] text-[#333] placeholder-[#bbb] bg-white outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
           />
           <button
             onClick={handleCustomSubmit}
             disabled={!customText.trim()}
-            className="
-              px-3 py-2 bg-[#6b6ef9] text-white rounded-lg text-[13px] font-medium
-              hover:bg-[#5254cc] transition-colors
-              disabled:opacity-40 disabled:cursor-not-allowed
-            "
+            className="px-3.5 py-2 rounded-lg bg-indigo-600 text-white text-[12.5px] font-semibold disabled:opacity-40 hover:bg-indigo-700 transition-colors shrink-0"
           >
             Send
           </button>
+          <button
+            onClick={() => {
+              setCustomMode(false);
+              setCustomText('');
+            }}
+            className="px-2.5 py-2 rounded-lg border border-gray-200 text-gray-500 text-[12px] hover:bg-gray-50 transition-colors shrink-0"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Locked indicator */}
+      {locked && selectedIndex !== undefined && (
+        <div className="flex items-center gap-1.5 mt-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 opacity-60" />
+          <span className="text-[11px] text-gray-400">Answer recorded</span>
         </div>
       )}
     </div>

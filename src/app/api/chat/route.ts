@@ -4,19 +4,37 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { messages, questionCount, mode } = await req.json();
+    const body = await req.json();
+    const { messages, questionCount, mode } = body;
+
+    // ── Input validation ──────────────────────────────────────────────
+    if (!Array.isArray(messages)) {
+      return NextResponse.json(
+        { error: 'messages must be an array' },
+        { status: 400 }
+      );
+    }
+
+    const qCount =
+      typeof questionCount === 'number' && Number.isFinite(questionCount)
+        ? questionCount
+        : 0;
+
+    const sessionMode =
+      mode === 'mcq' ? 'mcq' : 'standard';
 
     // Build a dynamic system prompt that tells the LLM exactly how many
     // questions it has asked already — critical for smart early wrap-up
-    const systemPrompt = mode === 'mcq' 
-      ? buildMCQSystemPrompt(questionCount ?? 0)
-      : buildSystemPrompt(questionCount ?? 0);
+    const systemPrompt =
+      sessionMode === 'mcq'
+        ? buildMCQSystemPrompt(qCount)
+        : buildSystemPrompt(qCount);
 
     const sarvamMessages = [
       { role: 'system' as const, content: systemPrompt },
       ...messages.map((m: { role: string; content: string }) => ({
         role: m.role as 'user' | 'assistant',
-        content: m.content,
+        content: String(m.content ?? ''),
       })),
     ];
 

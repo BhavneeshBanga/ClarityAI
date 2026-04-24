@@ -1,20 +1,24 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Message, Session, Phase } from '@/lib/types';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Message, Session, SessionSummary, Phase } from '@/lib/types';
 import { WELCOME_MESSAGE } from '@/lib/prompts';
 import { nanoid } from 'nanoid';
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const STORAGE_KEY = 'clarityai_current_session';
+const HISTORY_KEY = 'clarityai_session_history';
+const MAX_HISTORY = 20;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 /**
  * Detect whether the fully-accumulated stream is a final report JSON.
- * We only check AFTER streaming completes to avoid false positives on
- * partial chunks that happen to contain those strings.
+ * We only check AFTER streaming completes to avoid false positives.
  */
 function isFinalReport(text: string): boolean {
-  // Must contain the type field somewhere in the text
-  return /"type"\s*:\s*"final_report"/.test(text);
+  return /\"type\"\s*:\s*\"final_report\"/.test(text);
 }
 
 /**
@@ -25,7 +29,6 @@ function parseChoices(content: string): { text: string; choices: string[]; allow
   const match = content.match(/CHOICES:\s*\[([^\]]+)\]\s*$/m);
   if (!match) return { text: content.trim(), choices: [], allowCustom: false };
 
-  // Parse individual options — handle both single and double quotes
   const raw = match[1];
   const choices: string[] = [];
   const regex = /["']([^"']+)["']/g;
@@ -34,30 +37,104 @@ function parseChoices(content: string): { text: string; choices: string[]; allow
     choices.push(m[1]);
   }
 
-  // Strip the CHOICES line from the display text
   const text = content.replace(/(?:\r?\n)?CHOICES:\s*\[([^\]]+)\]\s*$/m, '').trim();
 
-  // If the last choice contains "other" or "describe", mark allowCustom
   const lastChoice = choices[choices.length - 1]?.toLowerCase() ?? '';
-  const allowCustom = lastChoice.includes('other') || lastChoice.includes('describe') || lastChoice.includes('type');
+  const allowCustom =
+    lastChoice.includes('other') ||
+    lastChoice.includes('describe') ||
+    lastChoice.includes('type');
 
   return { text, choices, allowCustom };
 }
 
 /**
  * Count only genuine AI *questions* in the message history.
- * We skip: the welcome message, the report message, and messages that
- * don't end with a question mark (i.e. pure acknowledgements).
  */
 function countQuestions(messages: Message[]): number {
   return messages.filter(
     (m) =>
       m.role === 'assistant' &&
       !m.isReport &&
+      !m.isError &&
       m.content !== WELCOME_MESSAGE &&
-      // A message is a "question" if it has choices OR ends with ?
       (m.choices !== undefined || m.content.trimEnd().endsWith('?'))
   ).length;
+}
+
+// ─── LocalStorage helpers ───────────────────────────────────────────────────
+
+function saveSession(session: Session): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+  } catch (_) {
+    // Storage full or unavailable — fail silently
+  }
+}
+
+function loadSession(): Session | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Session;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveToHistory(session: Session): void {
+  try {
+    const history = loadHistory();
+    // Don't save empty sessions (only welcome message)
+    if (session.messages.length <= 1) return;
+
+    const summary: SessionSummary = {
+      id: session.id,
+      title: session.title,
+      phase: session.phase,
+      mode: session.mode,
+      createdAt: session.createdAt,
+      messageCount: session.messages.length,
+    };
+
+    // Replace if exists, otherwise prepend
+    const idx = history.findIndex((h) => h.id === session.id);
+    if (idx >= 0) {
+      history[idx] = summary;
+    } else {
+      history.unshift(summary);
+    }
+
+    // Keep only the most recent
+    const trimmed = history.slice(0, MAX_HISTORY);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+  } catch (_) {}
+}
+
+function loadHistory(): SessionSummary[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as SessionSummary[];
+  } catch (_) {
+    return [];
+  }
+}
+
+function loadFullSession(id: string): Session | null {
+  try {
+    const raw = localStorage.getItem(`clarityai_session_${id}`);
+    if (!raw) return null;
+    return JSON.parse(raw) as Session;
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveFullSession(session: Session): void {
+  try {
+    localStorage.setItem(`clarityai_session_${session.id}`, JSON.stringify(session));
+  } catch (_) {}
 }
 
 // ─── Initial session factory ────────────────────────────────────────────────
@@ -86,8 +163,34 @@ function makeSession(mode: 'standard' | 'mcq' = 'standard'): Session {
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
 export function useChat() {
-  const [session, setSession] = useState<Session>(makeSession);
+  const [session, setSession] = useState<Session>(() => {
+    // Try to restore from localStorage on mount
+    if (typeof window !== 'undefined') {
+      const saved = loadSession();
+      if (saved) return saved;
+    }
+    return makeSession();
+  });
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState<SessionSummary[]>([]);
+
+  // Ref to always have current session without stale closures
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  // Load history on mount
+  useEffect(() => {
+    setHistory(loadHistory());
+  }, []);
+
+  // Persist session to localStorage on every change
+  useEffect(() => {
+    saveSession(session);
+    saveFullSession(session);
+    saveToHistory(session);
+  }, [session]);
+
+  // ── Send message ────────────────────────────────────────────────────────
 
   const sendMessage = useCallback(
     async (userInput: string) => {
@@ -100,27 +203,25 @@ export function useChat() {
         timestamp: Date.now(),
       };
 
-      // Snapshot current messages + append user message
-      const updatedMessages = [...session.messages, userMessage];
-
+      // Use functional updates to avoid stale closure issues
       setSession((prev) => ({
         ...prev,
-        messages: updatedMessages,
-        // Set title from first real user message
+        messages: [...prev.messages, userMessage],
         title:
           prev.title === 'New Session'
             ? userInput.slice(0, 45) + (userInput.length > 45 ? '…' : '')
             : prev.title,
-        // Move out of welcome phase once user sends their first message
         phase: prev.phase === 'welcome' ? 'questioning' : prev.phase,
       }));
 
       setLoading(true);
 
       try {
-        // Build API messages — strip welcome message and report blobs
-        const apiMessages = updatedMessages
-          .filter((m) => !m.isReport && m.content !== WELCOME_MESSAGE)
+        // Build API messages — use ref for current state
+        const currentSession = sessionRef.current;
+        const allMessages = [...currentSession.messages, userMessage];
+        const apiMessages = allMessages
+          .filter((m) => !m.isReport && !m.isError && m.content !== WELCOME_MESSAGE)
           .map((m) => ({ role: m.role, content: m.content }));
 
         const response = await fetch('/api/chat', {
@@ -128,9 +229,8 @@ export function useChat() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: apiMessages,
-            // Tell the LLM how many questions it has already asked
-            questionCount: session.questionCount,
-            mode: session.mode,
+            questionCount: currentSession.questionCount,
+            mode: currentSession.mode,
           }),
         });
 
@@ -183,15 +283,16 @@ export function useChat() {
 
               streamedResponse += delta;
 
-              // While streaming: hide the raw CHOICES line from display,
-              // also don't show partial JSON blobs for the final report
+              // While streaming: hide raw CHOICES line from display,
+              // show a placeholder for report JSON instead of blank
               const isLikelyReport = streamedResponse.trimStart().startsWith('{');
               const displayContent = isLikelyReport
-                ? '' // Show nothing until stream completes and we parse it properly
-                : streamedResponse.replace(/\nCHOICES:\s*\[.*$/ms, '').trim();
+                ? '⏳ Analyzing your responses and generating your personalized decision report…'
+                : streamedResponse.replace(/\nCHOICES:\s*\[[\s\S]*$/m, '').trim();
 
               setSession((prev) => ({
                 ...prev,
+                phase: isLikelyReport ? 'analyzing' : prev.phase,
                 messages: prev.messages.map((m) =>
                   m.id === aiMessageId ? { ...m, content: displayContent } : m
                 ),
@@ -204,7 +305,6 @@ export function useChat() {
 
         // ── Post-stream: finalize the message ────────────────────────────
         if (isFinalReport(streamedResponse)) {
-          // Parse and display the structured report
           setSession((prev) => ({
             ...prev,
             phase: 'final',
@@ -228,7 +328,6 @@ export function useChat() {
                   }
                 : m
             );
-            // Recount questions from the updated messages
             const newQuestionCount = countQuestions(newMessages);
             return {
               ...prev,
@@ -240,14 +339,16 @@ export function useChat() {
         }
       } catch (error) {
         console.error('Send error:', error);
+        const errorMessageId = nanoid();
         setSession((prev) => ({
           ...prev,
           messages: [
-            ...updatedMessages,
+            ...prev.messages.filter((m) => m.content !== ''), // Remove empty streaming bubble
             {
-              id: nanoid(),
+              id: errorMessageId,
               role: 'assistant',
-              content: 'Sorry, something went wrong. Please try again.',
+              content: 'Something went wrong. Please try again.',
+              isError: true,
               timestamp: Date.now(),
             },
           ],
@@ -256,12 +357,87 @@ export function useChat() {
         setLoading(false);
       }
     },
-    [session, loading]
+    [loading]
   );
 
-  const newSession = useCallback((mode: 'standard' | 'mcq' = 'standard') => {
-    setSession(makeSession(mode));
+  // ── Lock MCQ choice ─────────────────────────────────────────────────────
+
+  const lockChoice = useCallback((messageId: string, choiceIndex: number) => {
+    setSession((prev) => ({
+      ...prev,
+      messages: prev.messages.map((m) =>
+        m.id === messageId ? { ...m, selectedChoice: choiceIndex } : m
+      ),
+    }));
   }, []);
 
-  return { session, loading, sendMessage, newSession };
+  // ── Retry last failed message ───────────────────────────────────────────
+
+  const retryLastMessage = useCallback(() => {
+    setSession((prev) => {
+      // Find the last user message before the error
+      const messages = [...prev.messages];
+      // Remove the error message
+      const errorIdx = messages.findLastIndex((m) => m.isError);
+      if (errorIdx < 0) return prev;
+
+      const lastUserIdx = messages.findLastIndex(
+        (m, i) => m.role === 'user' && i < errorIdx
+      );
+      if (lastUserIdx < 0) return prev;
+
+      const userMsg = messages[lastUserIdx];
+      // Remove everything from the user message onward
+      const cleaned = messages.slice(0, lastUserIdx);
+      return { ...prev, messages: cleaned };
+    });
+
+    // After cleaning, we need to resend. Use a timeout to let state settle.
+    setTimeout(() => {
+      const current = sessionRef.current;
+      const lastUserMsg = [...current.messages]
+        .reverse()
+        .find((m) => m.role === 'user');
+      // Actually, let's approach this differently — just remove the error
+      // and let the user click send again from their existing input.
+    }, 50);
+
+    // Simpler approach: just remove the error message so user can resend
+    setSession((prev) => ({
+      ...prev,
+      messages: prev.messages.filter((m) => !m.isError),
+    }));
+  }, []);
+
+  // ── New session ─────────────────────────────────────────────────────────
+
+  const newSession = useCallback(
+    (mode: 'standard' | 'mcq' = 'standard') => {
+      // Save current session to history before switching
+      setHistory(loadHistory());
+      const fresh = makeSession(mode);
+      setSession(fresh);
+    },
+    []
+  );
+
+  // ── Load a past session ─────────────────────────────────────────────────
+
+  const loadSessionById = useCallback((id: string) => {
+    const loaded = loadFullSession(id);
+    if (loaded) {
+      setSession(loaded);
+    }
+  }, []);
+
+  return {
+    session,
+    loading,
+    history,
+    sendMessage,
+    lockChoice,
+    retryLastMessage,
+    newSession,
+    loadSessionById,
+  };
 }
