@@ -1,41 +1,59 @@
-import { callSarvamStream } from '@/lib/sarvam';
 import { buildSystemPrompt, buildMCQSystemPrompt } from '@/lib/prompts';
+import { callSarvamStream } from '@/lib/sarvam';
 import { NextResponse } from 'next/server';
+
+const MAX_MESSAGE_LENGTH = 8_000;  // chars per message
+const MAX_MESSAGES       = 60;     // total turns
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, questionCount, mode } = body;
+    const { messages, questionCount, mode, memoryNote } = body;
 
-    // ── Input validation ──────────────────────────────────────────────
+    // ── Validation ────────────────────────────────────────────────────────
     if (!Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: 'messages must be an array' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'messages must be an array' }, { status: 400 });
+    }
+    if (messages.length > MAX_MESSAGES) {
+      return NextResponse.json({ error: 'Too many messages in session' }, { status: 400 });
     }
 
-    const qCount =
-      typeof questionCount === 'number' && Number.isFinite(questionCount)
-        ? questionCount
-        : 0;
+    const qCount      = typeof questionCount === 'number' && Number.isFinite(questionCount) ? questionCount : 0;
+    const sessionMode = mode === 'mcq' ? 'mcq' : 'standard';
 
-    const sessionMode =
-      mode === 'mcq' ? 'mcq' : 'standard';
+    // Sanitize messages
+    const sanitized = messages
+      .filter((m: unknown) => m && typeof m === 'object')
+      .map((m: { role?: unknown; content?: unknown }) => ({
+        role: (m.role === 'user' || m.role === 'assistant') ? m.role : 'user',
+        content: String(m.content ?? '').slice(0, MAX_MESSAGE_LENGTH),
+      }))
+      .filter((m) => m.content.length > 0);
 
-    // Build a dynamic system prompt that tells the LLM exactly how many
-    // questions it has asked already — critical for smart early wrap-up
     const systemPrompt =
       sessionMode === 'mcq'
         ? buildMCQSystemPrompt(qCount)
         : buildSystemPrompt(qCount);
 
+    // ── Memory injection ─────────────────────────────────────────────────
+    // If the client sent a memory note (triggered after 10+ user messages),
+    // inject it as a system-level reminder before the last user message.
+    // This prevents the model from forgetting early context in long sessions.
+    let finalMessages = sanitized;
+    if (memoryNote && typeof memoryNote === 'string' && sanitized.length > 0) {
+      // Insert memory note as a user message just before the last exchange
+      const lastUserIdx = sanitized.length - 1;
+      finalMessages = [
+        ...sanitized.slice(0, lastUserIdx),
+        { role: 'user' as const, content: memoryNote.slice(0, 2000) },
+        { role: 'assistant' as const, content: 'Understood. I have reviewed everything you\'ve shared. Continuing with your session.' },
+        sanitized[lastUserIdx],
+      ];
+    }
+
     const sarvamMessages = [
       { role: 'system' as const, content: systemPrompt },
-      ...messages.map((m: { role: string; content: string }) => ({
-        role: m.role as 'user' | 'assistant',
-        content: String(m.content ?? ''),
-      })),
+      ...finalMessages,
     ];
 
     const response = await callSarvamStream(sarvamMessages);
@@ -47,8 +65,10 @@ export async function POST(req: Request) {
         'Connection': 'keep-alive',
       },
     });
+
   } catch (error) {
     console.error('Chat API error:', error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
