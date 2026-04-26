@@ -43,29 +43,38 @@ export default function FinalReport({ content }: Props) {
 
   return (
     <div className={`relative mt-4 border border-gray-200/60 rounded-[28px] p-6 sm:p-10 space-y-10 bg-white/70 backdrop-blur-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] ${inter.className} text-[#111]`}>
-      
+
       {/* Subtle shine effect */}
       <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-white/80 to-transparent pointer-events-none" />
 
       {/* Header & Score */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 relative z-10 border-b border-gray-100 pb-8">
         <div>
-           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50/80 border border-indigo-100/50 text-indigo-600 text-[11px] font-bold uppercase tracking-widest mb-4">
-             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-             Assessment Complete
-           </div>
-           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 leading-tight">
-             Decision Report
-           </h2>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50/80 border border-indigo-100/50 text-indigo-600 text-[11px] font-bold uppercase tracking-widest mb-4">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            Assessment Complete
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 leading-tight">
+            Decision Report
+          </h2>
         </div>
 
         <div className="flex flex-col items-start sm:items-end">
           <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Readiness Score</span>
           <div className="flex items-center gap-4">
-            <span className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tighter">{score}<span className="text-2xl sm:text-3xl text-gray-300 font-medium tracking-normal">/10</span></span>
+            <span className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tighter">
+              {score}<span className="text-2xl sm:text-3xl text-gray-300 font-medium tracking-normal">/10</span>
+            </span>
             <div className="flex flex-col gap-[3px]">
               {[...Array(10)].map((_, i) => (
-                <div key={i} className={`h-[3px] w-6 sm:w-8 rounded-full transition-all duration-500 delay-100 ${10-i <= score ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]' : 'bg-gray-100'}`} />
+                <div
+                  key={i}
+                  className={`h-[3px] w-6 sm:w-8 rounded-full transition-all duration-500 delay-100 ${
+                    10 - i <= score
+                      ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]'
+                      : 'bg-gray-100'
+                  }`}
+                />
               ))}
             </div>
           </div>
@@ -86,7 +95,9 @@ export default function FinalReport({ content }: Props) {
         <div className="bg-emerald-50/40 border border-emerald-100/60 rounded-2xl p-6 sm:p-7 shadow-sm">
           <h3 className="text-[13px] font-black text-emerald-700 uppercase tracking-widest mb-5 flex items-center gap-3">
             <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
             </div>
             Key Advantages
           </h3>
@@ -104,7 +115,9 @@ export default function FinalReport({ content }: Props) {
         <div className="bg-rose-50/40 border border-rose-100/60 rounded-2xl p-6 sm:p-7 shadow-sm">
           <h3 className="text-[13px] font-black text-rose-700 uppercase tracking-widest mb-5 flex items-center gap-3">
             <div className="w-7 h-7 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shadow-sm">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
             </div>
             Major Drawbacks
           </h3>
@@ -124,7 +137,11 @@ export default function FinalReport({ content }: Props) {
         <div className="bg-amber-50/40 border border-amber-100/60 rounded-2xl p-6 sm:p-7 relative z-10 shadow-sm">
           <h3 className="text-[13px] font-black text-amber-700 uppercase tracking-widest mb-5 flex items-center gap-3">
             <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
             </div>
             Critical Risks to Mitigate
           </h3>

@@ -25,16 +25,13 @@ body {
 ::-webkit-scrollbar {
   width: 5px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
   background: #ddd;
   border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: #bbb;
 }
@@ -59,7 +56,7 @@ input:focus {
 
 @keyframes fadeIn {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
 @keyframes slideInLeft {
@@ -75,21 +72,18 @@ input:focus {
 
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+  50%       { opacity: 0.6; }
 }
 
 .animate-fade-in-up {
   animation: fadeInUp 0.35s ease-out both;
 }
-
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out both;
 }
-
 .animate-slide-in-left {
   animation: slideInLeft 0.3s ease-out both;
 }
-
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
 }

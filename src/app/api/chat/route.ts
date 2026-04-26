@@ -2,8 +2,8 @@ import { buildSystemPrompt, buildMCQSystemPrompt } from '@/lib/prompts';
 import { callSarvamStream } from '@/lib/sarvam';
 import { NextResponse } from 'next/server';
 
-const MAX_MESSAGE_LENGTH = 8_000;  // chars per message
-const MAX_MESSAGES       = 60;     // total turns
+const MAX_MESSAGE_LENGTH = 8_000;
+const MAX_MESSAGES       = 60;
 
 export async function POST(req: Request) {
   try {
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const sanitized = messages
       .filter((m: unknown) => m && typeof m === 'object')
       .map((m: { role?: unknown; content?: unknown }) => ({
-        role: (m.role === 'user' || m.role === 'assistant') ? m.role : 'user',
+        role: (m.role === 'user' || m.role === 'assistant') ? (m.role as 'user' | 'assistant') : 'user',
         content: String(m.content ?? '').slice(0, MAX_MESSAGE_LENGTH),
       }))
       .filter((m) => m.content.length > 0);
@@ -36,12 +36,8 @@ export async function POST(req: Request) {
         : buildSystemPrompt(qCount);
 
     // ── Memory injection ─────────────────────────────────────────────────
-    // If the client sent a memory note (triggered after 10+ user messages),
-    // inject it as a system-level reminder before the last user message.
-    // This prevents the model from forgetting early context in long sessions.
     let finalMessages = sanitized;
     if (memoryNote && typeof memoryNote === 'string' && sanitized.length > 0) {
-      // Insert memory note as a user message just before the last exchange
       const lastUserIdx = sanitized.length - 1;
       finalMessages = [
         ...sanitized.slice(0, lastUserIdx),
@@ -65,7 +61,6 @@ export async function POST(req: Request) {
         'Connection': 'keep-alive',
       },
     });
-
   } catch (error) {
     console.error('Chat API error:', error);
     const message = error instanceof Error ? error.message : String(error);

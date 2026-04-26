@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---- NextAuth Boilerplate ----
@@ -62,6 +63,8 @@ model ChatSession {
   id             String    @id
   title          String
   phase          String
+  mode           String    @default("standard")
+  branchedFrom   String?
   questionCount  Int       @default(0)
   totalQuestions Int       @default(5)
   category       String?
@@ -79,7 +82,9 @@ model Message {
   role          String
   content       String      
   isReport      Boolean     @default(false)
+  isError       Boolean     @default(false)
   choicesJson   String?     // Stored as JSON string
+  allowCustom   Boolean     @default(false)
   timestamp     Float
   
   chatSessionId String

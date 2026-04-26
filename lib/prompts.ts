@@ -2,15 +2,6 @@
  * Build a dynamic system prompt that tells the LLM exactly how many
  * questions it has already asked, so it can decide intelligently when
  * to stop questioning and produce the final report.
- *
- * Key improvements over v1:
- * - Chain-of-thought reasoning step before every question
- * - Category-specific question banks (career, startup, finance, relationships, etc.)
- * - Conversation memory: model is told to recall what it already learned
- * - Few-shot examples of good vs bad questions
- * - Score rubric so numbers are meaningful
- * - Anti-redundancy instruction
- * - Richer final report structure
  */
 
 export function buildSystemPrompt(questionCount: number): string {

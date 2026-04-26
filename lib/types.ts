@@ -1,16 +1,15 @@
 export type Phase = 'welcome' | 'questioning' | 'analyzing' | 'final';
-
 export type MessageRole = 'user' | 'assistant';
 
 export interface Message {
   id: string;
   role: MessageRole;
   content: string;
-  choices?: string[];        // MCQ options shown as buttons
-  allowCustom?: boolean;     // Show "Other – type your own" input
-  selectedChoice?: number;   // Index of selected MCQ choice (locks buttons)
+  choices?: string[];
+  allowCustom?: boolean;
+  selectedChoice?: number;
   isReport?: boolean;
-  isError?: boolean;         // Whether this is an error message (shows retry)
+  isError?: boolean;
   timestamp: number;
 }
 
@@ -19,11 +18,13 @@ export interface Session {
   title: string;
   messages: Message[];
   phase: Phase;
-  questionCount: number;     // # of AI questions asked (not counting welcome)
-  totalQuestions: number;    // max cap (20)
+  questionCount: number;
+  totalQuestions: number;
   category: string;
   mode: 'standard' | 'mcq';
   createdAt: number;
+  /** ID of the session this was branched from, if any */
+  branchedFrom?: string;
 }
 
 export interface SessionSummary {
@@ -33,6 +34,8 @@ export interface SessionSummary {
   mode: 'standard' | 'mcq';
   createdAt: number;
   messageCount: number;
+  /** ID of the session this was branched from, if any */
+  branchedFrom?: string;
 }
 
 export interface FinalReport {
@@ -42,6 +45,6 @@ export interface FinalReport {
   cons: string[];
   risks: string[];
   verdict: string;
-  score: number;             // 1-10
+  score: number;
   next_steps?: string[];
 }
