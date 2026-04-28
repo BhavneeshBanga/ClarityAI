@@ -3,6 +3,12 @@
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { useState, Suspense } from 'react';
+function handleTermsClick() {
+    window.open("/terms", "_blank");
+}
+function handlePolicyClick() {
+    window.open("/Policy", "_blank");
+}
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -110,9 +116,17 @@ function LoginContent() {
         {/* Fine print */}
         <p className="text-[11.5px] text-[#bbb] text-center leading-relaxed">
           By signing in, you agree to our{' '}
-          <span className="underline cursor-pointer hover:text-[#999] transition-colors">Terms</span>
+          <span className="underline cursor-pointer hover:text-[#999] transition-colors"
+          onClick={handleTermsClick}
+          style={{
+            // color: "blue",
+            cursor: "pointer",
+            // textDecoration: "underline"
+          }}
+          >Terms</span>
           {' '}and{' '}
-          <span className="underline cursor-pointer hover:text-[#999] transition-colors">Privacy Policy</span>.
+          <span className="underline cursor-pointer hover:text-[#999] transition-colors" onClick={() => window.open("/privacy", "_blank")}
+          >Privacy Policy</span>.
         </p>
       </div>
 
