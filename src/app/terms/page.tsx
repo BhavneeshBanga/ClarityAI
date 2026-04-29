@@ -112,16 +112,36 @@ export default function TermsPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-[#e8e8e8] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-[12.5px] text-[#bbb]">
-            © 2026 ClarityAI. All rights reserved.
-          </p>
-          <a
-            href="/login"
-            className="text-[13px] text-[#6b6ef9] font-medium hover:underline"
-          >
-            ← Back to login
-          </a>
+        <div className="mt-16 pt-8 border-t border-[#e8e8e8]">
+          {/* Top row: copyright + back to login */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+            <p className="text-[12.5px] text-[#bbb]">
+              © 2026 ClarityAI. All rights reserved.
+            </p>
+            <a
+              href="/login"
+              className="text-[13px] text-[#6b6ef9] font-medium hover:underline"
+            >
+              ← Back to login
+            </a>
+          </div>
+
+          {/* Bottom row: extra links */}
+          <div className="flex items-center justify-center gap-5">
+            <a
+              href="/privacy"
+              className="text-[12.5px] text-[#aaa] hover:text-[#6b6ef9] transition-colors"
+            >
+              Privacy Policy
+            </a>
+            <span className="text-[#ddd] text-[12px]">·</span>
+            <a
+              href="/learn-more"
+              className="text-[12.5px] text-[#aaa] hover:text-[#6b6ef9] transition-colors"
+            >
+              Learn more about ClarityAI
+            </a>
+          </div>
         </div>
 
       </div>
