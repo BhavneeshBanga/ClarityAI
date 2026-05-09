@@ -135,6 +135,7 @@ export function useChat() {
   const [loading, setLoading]   = useState(false);
   const [history, setHistory]   = useState<SessionSummary[]>([]);
   const [dbReady, setDbReady]   = useState(false);
+  const [rateLimitHit, setRateLimitHit] = useState(false);
 
   const sessionRef  = useRef(session);
   sessionRef.current = session;
@@ -214,6 +215,7 @@ export function useChat() {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({
+            sessionId: currentSession.id,
             messages: apiMessages,
             questionCount: currentSession.questionCount,
             mode: currentSession.mode,
@@ -226,6 +228,9 @@ export function useChat() {
       }
 
       if (!response.ok) {
+        if (response.status === 429) {
+          setRateLimitHit(true);
+        }
         let errStr = `Server error (${response.status})`;
         try { const d = await response.json(); errStr = d.error || errStr; } catch { /* ignore */ }
         throw new Error(errStr);
@@ -422,5 +427,7 @@ export function useChat() {
     newSession,
     loadSessionById,
     deleteSession,
+    rateLimitHit,
+    setRateLimitHit,
   };
 }

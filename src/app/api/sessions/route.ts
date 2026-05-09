@@ -4,12 +4,17 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const sessions = await prisma.chatSession.findMany({
-    where: { userId: session.user.id },
+    where: { 
+      userId: userId,
+      phase: { notIn: ['deleted', 'deleted-final'] }
+    },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -29,12 +34,33 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const body = await req.json();
   const { id, title, phase, mode, questionCount, totalQuestions, category, branchedFrom, messages, createdAt } = body;
+
+  const adminEmail = 'f4factsbhavibanga7@gmail.com';
+  if (session?.user?.email !== adminEmail) {
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const recentSessions = await prisma.chatSession.findMany({
+      where: {
+        userId: userId,
+        createdAt: { gte: fortyEightHoursAgo },
+        phase: { in: ['final', 'deleted-final'] },
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const recentSessionIds = recentSessions.map(s => s.id);
+    if (recentSessionIds.length >= 2 && !recentSessionIds.slice(0, 2).includes(id)) {
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    }
+  }
 
   await prisma.chatSession.upsert({
     where: { id },
@@ -49,7 +75,7 @@ export async function POST(req: Request) {
     },
     create: {
       id,
-      userId: session.user.id,
+      userId: userId,
       title,
       phase,
       mode,

@@ -2,6 +2,7 @@ import { buildSystemPrompt, buildMCQSystemPrompt } from '@/lib/prompts';
 import { callSarvamStream } from '@/lib/sarvam';
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 const MAX_MESSAGE_LENGTH = 8_000;
 const MAX_MESSAGES       = 60;
@@ -9,12 +10,37 @@ const MAX_MESSAGES       = 60;
 export async function POST(req: Request) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userId = (session?.user as any)?.id;
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
-    const { messages, questionCount, mode, memoryNote } = body;
+    const { sessionId, messages, questionCount, mode, memoryNote } = body;
+
+    // ── Rate Limit Check ──────────────────────────────────────────────────
+    const adminEmail = 'f4factsbhavibanga7@gmail.com';
+    if (session?.user?.email !== adminEmail) {
+      const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      const recentSessions = await prisma.chatSession.findMany({
+        where: {
+          userId: userId,
+          createdAt: { gte: fortyEightHoursAgo },
+          phase: { in: ['final', 'deleted-final'] },
+        },
+        select: { id: true },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const recentSessionIds = recentSessions.map(s => s.id);
+      if (recentSessionIds.length >= 2 && !recentSessionIds.slice(0, 2).includes(sessionId)) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded. You get 2 free chats per 48 hours. Please try again later.' },
+          { status: 429 }
+        );
+      }
+    }
 
     // ── Validation ────────────────────────────────────────────────────────
     if (!Array.isArray(messages)) {

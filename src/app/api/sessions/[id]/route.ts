@@ -5,17 +5,20 @@ import { NextResponse } from 'next/server';
 // GET /api/sessions/[id] — load a full session with all messages
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await auth();
-  if (!session?.user?.id) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const chatSession = await prisma.chatSession.findFirst({
     where: {
-      id:     params.id,
-      userId: session.user.id, // ensure users can only read their own sessions
+      id:     id,
+      userId: userId, // ensure users can only read their own sessions
     },
     include: {
       messages: {
@@ -39,6 +42,7 @@ export async function GET(
     category:      chatSession.category ?? '',
     branchedFrom:  chatSession.branchedFrom ?? undefined,
     createdAt:     chatSession.createdAt.getTime(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     messages: chatSession.messages.map((m: any) => ({
       id:            m.id,
       role:          m.role,
@@ -57,19 +61,27 @@ export async function GET(
 // DELETE /api/sessions/[id] — delete a session
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await auth();
-  if (!session?.user?.id) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  await prisma.chatSession.deleteMany({
-    where: {
-      id:     params.id,
-      userId: session.user.id,
-    },
+  const existing = await prisma.chatSession.findFirst({
+    where: { id, userId },
   });
+
+  if (existing) {
+    const newPhase = existing.phase === 'final' ? 'deleted-final' : 'deleted';
+    await prisma.chatSession.update({
+      where: { id },
+      data: { phase: newPhase },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

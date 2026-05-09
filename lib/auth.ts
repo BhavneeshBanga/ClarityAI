@@ -4,6 +4,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 
 export const authOptions: NextAuthOptions = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma) as any,
 
   providers: [
@@ -29,6 +30,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token.userId && session.user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (session.user as any).id = token.userId as string;
       }
       return session;

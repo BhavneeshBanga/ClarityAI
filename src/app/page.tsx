@@ -87,7 +87,10 @@ export default function Page() {
     session, loading, history, dbReady,
     sendMessage, editMessage, branchFromMessage, lockChoice,
     retryLastMessage, newSession, loadSessionById, deleteSession,
+    rateLimitHit,
   } = useChat();
+
+  const [showRateLimitBanner, setShowRateLimitBanner] = useState(true);
 
   const [input, setInput]           = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -321,8 +324,9 @@ export default function Page() {
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            disabled={loading || session.phase === 'final'}
+            disabled={loading || session.phase === 'final' || rateLimitHit}
             placeholder={
+              rateLimitHit                 ? 'Rate limit reached. Please wait 48 hours...' :
               session.phase === 'final'    ? 'Session complete — start a new one to continue.' :
               session.phase === 'welcome'  ? 'Describe your big decision or challenge...' :
               'Type your answer...'
@@ -333,15 +337,47 @@ export default function Page() {
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || loading || session.phase === 'final'}
+            disabled={!input.trim() || loading || session.phase === 'final' || rateLimitHit}
             className="w-[34px] h-[34px] flex-shrink-0 rounded-lg flex items-center justify-center transition-all duration-200 disabled:opacity-30"
-            style={{ backgroundColor: input.trim() && !loading && session.phase !== 'final' ? '#6b6ef9' : '#e5e5e5' }}
+            style={{ backgroundColor: input.trim() && !loading && session.phase !== 'final' && !rateLimitHit ? '#6b6ef9' : '#e5e5e5' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 7h12M7 1l6 6-6 6" stroke={input.trim() && !loading && session.phase !== 'final' ? '#fff' : '#999'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M1 7h12M7 1l6 6-6 6" stroke={input.trim() && !loading && session.phase !== 'final' && !rateLimitHit ? '#fff' : '#999'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
+
+        {/* Rate Limit Banner */}
+        {rateLimitHit && showRateLimitBanner && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
+            {/* Backdrop optional, using pointer-events-none on parent and auto on child so background remains interactive or readable */}
+            <div className="bg-red-50 border border-red-200 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl p-6 w-full max-w-sm flex flex-col items-center text-center animate-fade-in-up relative pointer-events-auto">
+              <button 
+                onClick={() => setShowRateLimitBanner(false)}
+                className="absolute top-3.5 right-3.5 text-red-400 hover:text-red-700 bg-red-100 hover:bg-red-200 rounded-full p-1.5 transition-colors"
+                title="Close"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              
+              <div className="text-red-500 mb-3.5 bg-red-100 p-2.5 rounded-full">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+              </div>
+              
+              <h3 className="text-[17px] font-bold text-red-800 mb-2">Limit Reached</h3>
+              <p className="text-[13.5px] text-red-600 leading-relaxed">
+                You have used your 2 free complete chats. Please wait <strong className="font-semibold text-red-700">48 hours</strong> from your first chat to continue.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="text-center text-[11px] text-[#bbb] pb-2">
           ClarityAI can make mistakes. Consider verifying important information.
