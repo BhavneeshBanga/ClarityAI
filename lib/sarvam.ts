@@ -13,7 +13,7 @@ export async function callSarvamStream(messages: SarvamMessage[]): Promise<Respo
     body: JSON.stringify({
       model: 'sarvam-105b',
       messages,
-      max_tokens: 1500,
+      max_tokens: 4096,
       temperature: 0.7,
       stream: true,
     }),
