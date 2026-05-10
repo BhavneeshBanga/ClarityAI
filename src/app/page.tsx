@@ -12,17 +12,17 @@ import Image from 'next/image';
 // ─── Phase config ─────────────────────────────────────────────────────────────
 
 const PHASE_LABELS: Record<string, string> = {
-  welcome:    'Getting Started',
+  welcome:     'Getting Started',
   questioning: 'Gathering Clarity',
-  analyzing:  'Analyzing Responses',
-  final:      'Report Complete',
+  analyzing:   'Analyzing Responses',
+  final:       'Report Complete',
 };
 
 const PHASE_ICONS: Record<string, string> = {
-  welcome:    '👋',
+  welcome:     '👋',
   questioning: '🔍',
-  analyzing:  '⚡',
-  final:      '✅',
+  analyzing:   '⚡',
+  final:       '✅',
 };
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
       elements.pop();
       elements.push(
         <div key={`bullet-${lineIdx}`} className="flex gap-2 mt-1">
-          <span className="text-[#6b6ef9] shrink-0 mt-[1px]">•</span>
+          <span className="text-[#5b5cf6] shrink-0 mt-[1px]">•</span>
           <span>{parts}</span>
         </div>
       );
@@ -65,7 +65,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
         elements.pop();
         elements.push(
           <div key={`num-${lineIdx}`} className="flex gap-2 mt-1">
-            <span className="text-[#6b6ef9] font-medium shrink-0 text-[12px] mt-[2px] w-4 text-right">{numMatch[1]}.</span>
+            <span className="text-[#5b5cf6] font-medium shrink-0 text-[12px] mt-[2px] w-4 text-right">{numMatch[1]}.</span>
             <span>{parts}</span>
           </div>
         );
@@ -91,12 +91,11 @@ export default function Page() {
   } = useChat();
 
   const [showRateLimitBanner, setShowRateLimitBanner] = useState(true);
-
-  const [input, setInput]           = useState('');
+  const [input, setInput]             = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [deletingId, setDeletingId]  = useState<string | null>(null);
-  const messagesEndRef  = useRef<HTMLDivElement>(null);
-  const textareaRef     = useRef<HTMLTextAreaElement>(null);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef    = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [session.messages]);
   useEffect(() => {
@@ -145,50 +144,69 @@ export default function Page() {
   const isBranch   = !!session.branchedFrom;
   const user       = authSession?.user;
 
+  const canSend = input.trim() && !loading && session.phase !== 'final' && !rateLimitHit;
+
   return (
-    <div className="flex h-screen w-full bg-[#f5f5f5] font-sans">
+    <div className="flex h-screen w-full font-sans" style={{ background: '#f5f5f5' }}>
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/20 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-30 md:hidden" style={{ background: 'rgba(10,10,15,0.25)' }} onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <aside className={`
         fixed md:relative z-40 md:z-auto w-[260px] md:w-[220px]
-        flex-shrink-0 flex-col border-r border-[#e5e5e5] bg-[#fafafa]
-        transition-transform duration-300 ease-out h-full
+        flex-shrink-0 flex-col h-full
+        transition-transform duration-300 ease-out
         ${sidebarOpen ? 'translate-x-0 flex' : '-translate-x-full md:translate-x-0 md:flex hidden md:flex'}
-      `}>
+      `} style={{ background: '#f5f5f5', borderRight: '1px solid rgba(10,10,15,0.08)' }}>
+
         {/* Logo */}
         <div className="px-4 pt-5 pb-4 flex items-center justify-between">
-          <span className="text-[20px] font-bold tracking-tight text-[#111]">
-            Clarity<span className="text-[#6b6ef9]">AI</span>
+          <span className="text-[20px] font-bold tracking-tight" style={{ color: '#0a0a0f' }}>
+            Clarity<span style={{ color: '#5b5cf6' }}>AI</span>
           </span>
-          <button onClick={() => setSidebarOpen(false)} className="md:hidden w-7 h-7 flex items-center justify-center text-[#999] hover:text-[#333] transition-colors">
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden w-7 h-7 flex items-center justify-center transition-colors"
+            style={{ color: '#aaa' }}
+          >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
           </button>
         </div>
 
         {/* New session buttons */}
         <div className="px-3 mb-3 flex flex-col gap-2">
-          <button onClick={() => { newSession('standard'); setSidebarOpen(false); }} className="w-full flex items-center gap-2 rounded-lg border border-[#e0e0e0] bg-white px-3 py-2 text-[12.5px] text-[#555] hover:bg-[#f5f5f5] transition-colors">
+          <button
+            onClick={() => { newSession('standard'); setSidebarOpen(false); }}
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] transition-colors"
+            style={{ border: '1px solid rgba(10,10,15,0.1)', background: '#ffffff', color: '#555' }}
+          >
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
             New session
           </button>
-          <button onClick={() => { newSession('mcq'); setSidebarOpen(false); }} className="w-full flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-[12.5px] font-medium text-indigo-700 hover:bg-indigo-100/50 hover:border-indigo-300 transition-colors">
+          <button
+            onClick={() => { newSession('mcq'); setSidebarOpen(false); }}
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors"
+            style={{ border: '1px solid #c4c4fd', background: '#eeeeff', color: '#4a4ab8' }}
+          >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
             New MCQ session
           </button>
         </div>
 
-        {/* History */}
-        <div className="px-4 mb-1.5 text-[10.5px] font-medium uppercase tracking-wider text-[#aaa] flex items-center justify-between">
+        {/* History label */}
+        <div className="px-4 mb-1.5 flex items-center justify-between" style={{ fontSize: 10.5, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#aaa' }}>
           <span>Recent</span>
-          {!dbReady && <span className="text-[10px] text-[#ccc] animate-pulse">syncing…</span>}
+          {!dbReady && <span style={{ fontSize: 10, color: '#ccc' }} className="animate-pulse">syncing…</span>}
         </div>
 
+        {/* History list */}
         <div className="flex-1 overflow-y-auto px-3 space-y-0.5">
           {/* Active session */}
-          <div className="rounded-md bg-[#ededff] px-2.5 py-1.5 text-[12px] text-[#5254cc] cursor-default font-medium flex items-center gap-1.5">
+          <div
+            className="rounded-md px-2.5 py-1.5 text-[12px] font-medium flex items-center gap-1.5 cursor-default"
+            style={{ background: '#eeeeff', color: '#4a4ab8' }}
+          >
             {isBranch && <BranchIcon />}
             <span className="truncate flex-1">{session.title}</span>
           </div>
@@ -198,16 +216,21 @@ export default function Page() {
             <div
               key={h.id}
               onClick={() => { loadSessionById(h.id); setSidebarOpen(false); }}
-              className="group/hist rounded-md px-2.5 py-1.5 text-[12px] text-[#666] cursor-pointer hover:bg-[#f0f0f0] transition-colors flex items-center gap-1.5"
+              className="group/hist rounded-md px-2.5 py-1.5 text-[12px] cursor-pointer flex items-center gap-1.5 transition-colors"
+              style={{ color: '#666' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(10,10,15,0.05)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
               {h.branchedFrom && <BranchIcon />}
-              {h.mode === 'mcq' && <span className="text-[9px] bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded font-bold shrink-0">MCQ</span>}
+              {h.mode === 'mcq' && (
+                <span className="text-[9px] px-1 py-0.5 rounded font-bold shrink-0" style={{ background: '#eeeeff', color: '#5b5cf6' }}>MCQ</span>
+              )}
               <span className="truncate flex-1">{h.title}</span>
-              {/* Delete button */}
               <button
                 onClick={(e) => handleDelete(e, h.id)}
                 disabled={deletingId === h.id}
-                className="opacity-0 group-hover/hist:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded text-[#ccc] hover:text-red-400 hover:bg-red-50 shrink-0"
+                className="opacity-0 group-hover/hist:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded shrink-0"
+                style={{ color: '#ccc' }}
                 title="Delete session"
               >
                 {deletingId === h.id
@@ -219,25 +242,26 @@ export default function Page() {
           ))}
 
           {history.filter((h) => h.id !== session.id).length === 0 && dbReady && (
-            <div className="text-[11px] text-[#ccc] px-2.5 py-3 italic">No past sessions yet</div>
+            <div className="px-2.5 py-3 italic" style={{ fontSize: 11, color: '#ccc' }}>No past sessions yet</div>
           )}
         </div>
 
         {/* User profile footer */}
-        <div className="p-3 border-t border-[#eeeeee]">
+        <div className="p-3" style={{ borderTop: '1px solid rgba(10,10,15,0.07)' }}>
           <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2">
             {user?.image
               ? <Image src={user.image} alt={user.name ?? ''} width={28} height={28} className="rounded-full shrink-0" />
-              : <div className="w-7 h-7 rounded-full bg-[#ededff] flex items-center justify-center text-[11px] font-bold text-[#5254cc] shrink-0">{user?.name?.[0] ?? '?'}</div>
+              : <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0" style={{ background: '#eeeeff', color: '#4a4ab8' }}>{user?.name?.[0] ?? '?'}</div>
             }
             <div className="flex-1 min-w-0">
-              <div className="text-[12px] font-medium text-[#333] truncate">{user?.name ?? 'User'}</div>
-              <div className="text-[10.5px] text-[#aaa] truncate">{user?.email}</div>
+              <div className="text-[12px] font-medium truncate" style={{ color: '#333' }}>{user?.name ?? 'User'}</div>
+              <div className="text-[10.5px] truncate" style={{ color: '#aaa' }}>{user?.email}</div>
             </div>
             <button
               onClick={() => signOut({ callbackUrl: '/login' })}
               title="Sign out"
-              className="w-6 h-6 flex items-center justify-center text-[#bbb] hover:text-[#666] transition-colors shrink-0"
+              className="w-6 h-6 flex items-center justify-center transition-colors shrink-0"
+              style={{ color: '#bbb' }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -250,39 +274,45 @@ export default function Page() {
       </aside>
 
       {/* ── Main panel ──────────────────────────────────────────────────── */}
-      <main className="flex flex-1 flex-col min-w-0 bg-white">
+      <main className="flex flex-1 flex-col min-w-0" style={{ background: '#ffffff' }}>
+
         {/* Header */}
-        <header className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[#f0f0f0]">
+        <header className="flex items-center justify-between px-4 sm:px-5 py-3" style={{ borderBottom: '1px solid rgba(10,10,15,0.07)' }}>
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden w-8 h-8 flex items-center justify-center text-[#666] hover:text-[#333] hover:bg-[#f0f0f0] rounded-lg transition-colors">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+              style={{ color: '#666' }}
+            >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M3 9h12M3 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
             </button>
-            <span className="md:hidden text-[16px] font-bold tracking-tight text-[#111]">Clarity<span className="text-[#6b6ef9]">AI</span></span>
+            <span className="md:hidden text-[16px] font-bold tracking-tight" style={{ color: '#0a0a0f' }}>
+              Clarity<span style={{ color: '#5b5cf6' }}>AI</span>
+            </span>
             <div className="hidden md:flex items-center gap-2">
               {isBranch && (
-                <span className="inline-flex items-center gap-1 text-[10.5px] text-[#8b8ff5] bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
+                <span className="inline-flex items-center gap-1 text-[10.5px] rounded-full px-2 py-0.5" style={{ color: '#5b5cf6', background: '#eeeeff', border: '1px solid #c4c4fd' }}>
                   <BranchIcon /> branch
                 </span>
               )}
-              <span className="text-[13.5px] font-medium text-[#111]">{session.title}</span>
+              <span className="text-[13.5px] font-medium" style={{ color: '#0a0a0f' }}>{session.title}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] bg-[#ededff] text-[#5254cc] rounded-full px-3 py-1 whitespace-nowrap">
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] rounded-full px-3 py-1 whitespace-nowrap" style={{ background: '#eeeeff', color: '#4a4ab8' }}>
               <span>{phaseIcon}</span>{phaseLabel}
             </span>
-            {/* Mobile user avatar */}
             {user?.image
               ? <Image src={user.image} alt="" width={26} height={26} className="rounded-full md:hidden" />
-              : <div className="w-[26px] h-[26px] rounded-full bg-[#ededff] flex items-center justify-center text-[10px] font-bold text-[#5254cc] md:hidden">{user?.name?.[0] ?? '?'}</div>
+              : <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[10px] font-bold md:hidden" style={{ background: '#eeeeff', color: '#4a4ab8' }}>{user?.name?.[0] ?? '?'}</div>
             }
           </div>
         </header>
 
-        {/* Progress */}
-        <div className="h-[2px] bg-[#f0f0f0]">
-          <div className="h-full bg-[#6b6ef9] rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
+        {/* Progress bar */}
+        <div className="h-[2px]" style={{ background: 'rgba(10,10,15,0.06)' }}>
+          <div className="h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%`, background: '#5b5cf6' }} />
         </div>
 
         {/* Chat area */}
@@ -305,10 +335,10 @@ export default function Page() {
 
           {loading && (
             <div className="flex gap-2.5 max-w-[92%] animate-fade-in">
-              <div className="w-[26px] h-[26px] rounded-full bg-[#ededff] text-[#5254cc] flex items-center justify-center text-[10.5px] font-medium shrink-0 mt-0.5">C</div>
-              <div className="bg-[#f7f7f8] border border-[#ececec] rounded-[2px_10px_10px_10px] px-4 py-3 flex items-center gap-1.5">
+              <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[10.5px] font-medium shrink-0 mt-0.5" style={{ background: '#eeeeff', color: '#4a4ab8' }}>C</div>
+              <div className="flex items-center gap-1.5 px-4 py-3 rounded-[2px_10px_10px_10px]" style={{ background: 'rgba(10,10,15,0.04)', border: '1px solid rgba(10,10,15,0.07)' }}>
                 {[0, 150, 300].map((delay) => (
-                  <div key={delay} className="w-1.5 h-1.5 bg-[#bbb] rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                  <div key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: '#bbb', animationDelay: `${delay}ms` }} />
                 ))}
               </div>
             </div>
@@ -317,8 +347,8 @@ export default function Page() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <div className="border-t border-[#f0f0f0] px-4 py-3 flex items-end gap-2.5">
+        {/* Input area */}
+        <div className="px-4 py-3 flex items-end gap-2.5" style={{ borderTop: '1px solid rgba(10,10,15,0.07)' }}>
           <textarea
             ref={textareaRef}
             value={input}
@@ -326,60 +356,66 @@ export default function Page() {
             onKeyDown={handleKeyDown}
             disabled={loading || session.phase === 'final' || rateLimitHit}
             placeholder={
-              rateLimitHit                 ? 'Rate limit reached. Please wait 48 hours...' :
-              session.phase === 'final'    ? 'Session complete — start a new one to continue.' :
-              session.phase === 'welcome'  ? 'Describe your big decision or challenge...' :
+              rateLimitHit              ? 'Rate limit reached. Please wait 48 hours...' :
+              session.phase === 'final' ? 'Session complete — start a new one to continue.' :
+              session.phase === 'welcome' ? 'Describe your big decision or challenge...' :
               'Type your answer...'
             }
             rows={1}
-            style={{ minHeight: '38px', maxHeight: '180px' }}
-            className="flex-1 resize-none border border-[#e0e0e0] rounded-[8px] px-3.5 py-2.5 text-[13px] text-[#333] placeholder-[#bbb] bg-white outline-none focus:border-[#aab] focus:ring-2 focus:ring-[#6b6ef9]/10 transition-all"
+            style={{
+              flex: 1, resize: 'none', minHeight: 38, maxHeight: 180,
+              border: '1px solid rgba(10,10,15,0.12)',
+              borderRadius: 8, padding: '10px 14px',
+              fontSize: 13, color: '#0a0a0f',
+              background: '#ffffff',
+              outline: 'none',
+              fontFamily: 'inherit',
+              transition: 'border-color 0.15s',
+            }}
+            onFocus={e => (e.target.style.borderColor = '#5b5cf6')}
+            onBlur={e => (e.target.style.borderColor = 'rgba(10,10,15,0.12)')}
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || loading || session.phase === 'final' || rateLimitHit}
-            className="w-[34px] h-[34px] flex-shrink-0 rounded-lg flex items-center justify-center transition-all duration-200 disabled:opacity-30"
-            style={{ backgroundColor: input.trim() && !loading && session.phase !== 'final' && !rateLimitHit ? '#6b6ef9' : '#e5e5e5' }}
+            disabled={!canSend}
+            className="w-[34px] h-[34px] flex-shrink-0 rounded-lg flex items-center justify-center transition-all duration-200"
+            style={{ background: canSend ? '#5b5cf6' : 'rgba(10,10,15,0.08)' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 7h12M7 1l6 6-6 6" stroke={input.trim() && !loading && session.phase !== 'final' && !rateLimitHit ? '#fff' : '#999'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M1 7h12M7 1l6 6-6 6" stroke={canSend ? '#fff' : 'rgba(10,10,15,0.3)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
 
-        {/* Rate Limit Banner */}
+        {/* Rate limit banner */}
         {rateLimitHit && showRateLimitBanner && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
-            {/* Backdrop optional, using pointer-events-none on parent and auto on child so background remains interactive or readable */}
-            <div className="bg-red-50 border border-red-200 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl p-6 w-full max-w-sm flex flex-col items-center text-center animate-fade-in-up relative pointer-events-auto">
-              <button 
+            <div className="shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl p-6 w-full max-w-sm flex flex-col items-center text-center animate-fade-in-up relative pointer-events-auto" style={{ background: '#fff8f8', border: '1px solid rgba(220,38,38,0.15)' }}>
+              <button
                 onClick={() => setShowRateLimitBanner(false)}
-                className="absolute top-3.5 right-3.5 text-red-400 hover:text-red-700 bg-red-100 hover:bg-red-200 rounded-full p-1.5 transition-colors"
+                className="absolute top-3.5 right-3.5 rounded-full p-1.5 transition-colors"
+                style={{ color: '#dc2626', background: '#fee2e2' }}
                 title="Close"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
               </button>
-              
-              <div className="text-red-500 mb-3.5 bg-red-100 p-2.5 rounded-full">
+              <div className="mb-3.5 p-2.5 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                  <line x1="12" y1="9" x2="12" y2="13"></line>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                 </svg>
               </div>
-              
-              <h3 className="text-[17px] font-bold text-red-800 mb-2">Limit Reached</h3>
-              <p className="text-[13.5px] text-red-600 leading-relaxed">
-                You have used your 2 free complete chats. Please wait <strong className="font-semibold text-red-700">48 hours</strong> from your first chat to continue.
+              <h3 className="text-[17px] font-bold mb-2" style={{ color: '#7f1d1d' }}>Limit Reached</h3>
+              <p className="text-[13.5px] leading-relaxed" style={{ color: '#b91c1c' }}>
+                You have used your 2 free complete chats. Please wait <strong>48 hours</strong> from your first chat to continue.
               </p>
             </div>
           </div>
         )}
 
-        <div className="text-center text-[11px] text-[#bbb] pb-2">
+        <div className="text-center pb-2" style={{ fontSize: 11, color: 'rgba(10,10,15,0.25)' }}>
           ClarityAI can make mistakes. Consider verifying important information.
         </div>
       </main>
@@ -420,7 +456,13 @@ function MessageBubble({
 
   return (
     <div className={`flex gap-2.5 animate-fade-in-up ${msg.role === 'user' ? 'justify-end flex-row-reverse' : 'justify-start'} max-w-[92%] ${msg.role === 'user' ? 'ml-auto' : ''}`}>
-      <div className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[10.5px] font-medium shrink-0 mt-0.5 ${msg.role === 'assistant' ? 'bg-[#ededff] text-[#5254cc]' : 'bg-[#f0f0f0] text-[#666]'}`}>
+      {/* Avatar */}
+      <div
+        className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-[10.5px] font-medium shrink-0 mt-0.5"
+        style={msg.role === 'assistant'
+          ? { background: '#eeeeff', color: '#4a4ab8' }
+          : { background: 'rgba(10,10,15,0.07)', color: '#555' }}
+      >
         {msg.role === 'assistant' ? 'C' : 'Y'}
       </div>
 
@@ -430,28 +472,35 @@ function MessageBubble({
         ) : (
           <div className="group/aimsg relative">
             {msg.isError ? (
-              <div className="bg-red-50 border border-red-100 text-red-700 text-[13px] leading-relaxed px-3.5 py-2.5 rounded-[2px_10px_10px_10px] flex items-center gap-2.5">
+              <div className="text-[13px] leading-relaxed px-3.5 py-2.5 rounded-[2px_10px_10px_10px] flex items-center gap-2.5" style={{ background: '#fff5f5', border: '1px solid rgba(220,38,38,0.15)', color: '#dc2626' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                 <span>{msg.content}</span>
-                <button onClick={onRetry} className="ml-auto shrink-0 px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded-md text-[11px] font-medium transition-colors">Retry</button>
+                <button
+                  onClick={onRetry}
+                  className="ml-auto shrink-0 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+                  style={{ background: '#fee2e2', color: '#dc2626' }}
+                >Retry</button>
               </div>
             ) : msg.isReport ? (
               <FinalReport content={msg.content} />
             ) : session.phase === 'analyzing' && isLast ? (
-              <div className="bg-[#f7f7f8] border border-[#ececec] text-[#222] px-4 py-3.5 rounded-[2px_10px_10px_10px] flex items-center gap-3">
-                <div className="w-2 h-2 bg-[#6b6ef9] rounded-full animate-pulse-soft" />
-                <span className="text-[13px] font-medium text-[#666]">Analyzing your responses and generating your decision report…</span>
+              <div className="flex items-center gap-3 px-4 py-3.5 rounded-[2px_10px_10px_10px]" style={{ background: 'rgba(10,10,15,0.04)', border: '1px solid rgba(10,10,15,0.07)' }}>
+                <div className="w-2 h-2 rounded-full animate-pulse-soft" style={{ background: '#5b5cf6' }} />
+                <span className="text-[13px] font-medium" style={{ color: '#666' }}>Analyzing your responses and generating your decision report…</span>
               </div>
             ) : (
               <>
-                <div className="bg-[#f7f7f8] border border-[#ececec] text-[#222] text-[13px] leading-relaxed px-3.5 py-2.5 rounded-[2px_10px_10px_10px]">
+                <div className="text-[13px] leading-relaxed px-3.5 py-2.5 rounded-[2px_10px_10px_10px]" style={{ background: 'rgba(10,10,15,0.04)', border: '1px solid rgba(10,10,15,0.07)', color: '#0a0a0f' }}>
                   <div className="whitespace-pre-wrap">{renderMarkdown(msg.content)}</div>
                 </div>
 
                 {canBranch && (
                   <button
                     onClick={() => onBranchFrom(msg.id)}
-                    className="mt-1.5 opacity-0 group-hover/aimsg:opacity-100 transition-opacity duration-150 inline-flex items-center gap-1.5 text-[11px] text-[#888] hover:text-[#5254cc] border border-transparent hover:border-indigo-200 hover:bg-indigo-50 rounded-full px-2.5 py-1"
+                    className="mt-1.5 opacity-0 group-hover/aimsg:opacity-100 transition-opacity duration-150 inline-flex items-center gap-1.5 text-[11px] rounded-full px-2.5 py-1"
+                    style={{ color: '#888', border: '1px solid transparent' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#5b5cf6'; (e.currentTarget as HTMLElement).style.background = '#eeeeff'; (e.currentTarget as HTMLElement).style.borderColor = '#c4c4fd'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#888'; (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent'; }}
                   >
                     <BranchIcon /> Branch from here
                   </button>
@@ -469,8 +518,8 @@ function MessageBubble({
                 )}
 
                 {session.phase === 'questioning' && isLast && msg.role === 'assistant' && !loading && (
-                  <div className="inline-flex items-center gap-1.5 mt-2 text-[11px] bg-[#f0faf5] text-[#1a7a52] rounded-full px-2.5 py-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#1a7a52]" />
+                  <div className="inline-flex items-center gap-1.5 mt-2 text-[11px] rounded-full px-2.5 py-1" style={{ background: '#f0faf5', color: '#1a7a52' }}>
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#1a7a52' }} />
                     Question {session.questionCount} of {session.totalQuestions}
                   </div>
                 )}
