@@ -26,7 +26,7 @@ ClarityAI is not a chatbot. It is a structured decision-making engine. You descr
 
 ## How It Works
 
-```
+```text
 You describe the decision
         ↓
 ClarityAI identifies the category
@@ -78,11 +78,16 @@ Every session ends with a structured report card:
 | **Executive Verdict** | Direct recommendation — what to do and why |
 | **Action Plan** | 3 concrete next steps with timeframes |
 
-### Session Persistence
-- Sessions are automatically saved to your browser's localStorage
-- Refresh the page — your session is exactly where you left it
-- Access up to 20 past sessions from the sidebar
-- Switch between past decisions at any time
+### Cloud Session Persistence & Authentication
+- Secure authentication via NextAuth.js
+- Sessions are saved in real-time to a Turso cloud database
+- Access your past decisions from any device, anywhere
+- Seamlessly switch between past decisions at any time
+
+### Usage Limits & Cost Control
+- Smart rate-limiting to prevent API abuse (quota system: 2 completed chats per 48 hours)
+- Admin bypass capabilities for continuous access
+- Elegant modal notifications when limits are reached
 
 ### Mobile-First Design
 - Full mobile support with slide-in sidebar
@@ -109,34 +114,37 @@ Every session ends with a structured report card:
 | Font | Inter (Google Fonts via next/font) |
 | AI Model | Sarvam AI (streaming) |
 | State | React hooks + useRef (race-condition safe) |
-| Persistence | Browser localStorage |
-| ORM | Prisma (schema ready for future auth/DB) |
+| Persistence | Turso Database (libSQL) |
+| ORM | Prisma |
+| Authentication | NextAuth.js |
 
 ---
 
 ## Project Structure
 
-```
+```text
 clarityai/
 ├── src/
 │   └── app/
-│       ├── page.tsx           # Main chat UI — all components in one file
-│       ├── layout.tsx         # Root layout, Inter font loading
+│       ├── page.tsx           # Main UI — Landing and Chat Interface
+│       ├── layout.tsx         # Root layout, Inter font loading, Auth Provider
 │       ├── globals.css        # Base styles, animations, scrollbar
 │       └── api/
-│           └── chat/
-│               └── route.ts   # API endpoint — prompt building, Sarvam call
+│           ├── chat/          # API endpoint — prompt building, Sarvam call
+│           ├── sessions/      # API endpoint for fetching/saving sessions
+│           └── auth/          # NextAuth routes
 ├── components/
 │   ├── FinalReport.tsx        # Decision report card (beautiful render)
-│   └── MCQInput.tsx           # Multiple choice button group
+│   ├── MCQInput.tsx           # Multiple choice button group
+│   └── UsageLimitModal.tsx    # Rate limiting notification UI
 ├── hooks/
-│   └── useChat.ts             # All state: messages, streaming, localStorage, retry
+│   └── useChat.ts             # All state: messages, streaming, DB sync
 ├── lib/
 │   ├── types.ts               # TypeScript types: Message, Session, Phase, etc.
 │   ├── prompts.ts             # System prompts, memory injection, welcome message
-│   └── sarvam.ts             # Sarvam AI streaming client
+│   └── sarvam.ts              # Sarvam AI streaming client
 ├── prisma/
-│   └── schema.prisma          # DB schema (ready for future auth + cloud persistence)
+│   └── schema.prisma          # DB schema (Users, Accounts, Sessions, ChatHistory)
 ├── tailwind.config.ts
 ├── package.json
 └── README.md
@@ -149,6 +157,8 @@ clarityai/
 ### Prerequisites
 - Node.js 18+
 - A Sarvam AI API key (get one at sarvam.ai)
+- Turso Database URL and Auth Token
+- Auth credentials (e.g., GitHub OAuth for NextAuth)
 
 ### Installation
 
@@ -164,8 +174,20 @@ Create a `.env.local` file:
 
 ```env
 SARVAM_API_KEY=your_sarvam_api_key_here
-# Optional: for future database persistence
-DATABASE_URL=file:./dev.db
+TURSO_DATABASE_URL=your_turso_db_url
+TURSO_AUTH_TOKEN=your_turso_auth_token
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+GITHUB_ID=your_github_client_id
+GITHUB_SECRET=your_github_client_secret
+ADMIN_EMAILS=your_admin_email@example.com
+```
+
+### Database Setup
+
+```bash
+npx prisma generate
+npx prisma db push
 ```
 
 ### Run Locally
@@ -185,26 +207,21 @@ npm start
 
 ---
 
-## Known Limitations
-
-| Limitation | Workaround / Future fix |
-|---|---|
-| Sessions stored in browser only | Prisma schema is ready — add NextAuth + DB for cloud sync |
-| No user accounts | Users can't access sessions across devices |
-| No rate limiting | Add middleware rate limiting before production deployment |
-| Sarvam API dependency | If Sarvam is down, the app shows a clear timeout error with retry |
-| Report JSON can fail to parse if model adds extra text | parseReport() catches this gracefully and shows raw response |
+## Recent Major Updates
+- **User Authentication:** Fully integrated NextAuth.js for secure user sign-in.
+- **Cloud Database Persistence:** Migrated from local storage to Turso DB with Prisma ORM. Sessions are now securely stored and synced across devices.
+- **Usage Limits:** Implemented a robust 48-hour rate-limiting system (2 completed chats per user) to control API costs, featuring a beautiful notification modal.
+- **Admin Bypass:** Added an admin bypass for rate limits based on user email.
+- **Secure API Routes:** All API routes are strictly protected and tied to the authenticated user's session.
 
 ---
 
 ## Roadmap
 
-### Near-term (could build now)
+### Near-term
 - [ ] Export report as PDF
 - [ ] Share report via link (public URL)
-- [ ] User accounts + cloud session sync (Prisma schema already done)
 - [ ] Email report to yourself
-- [ ] Rate limiting middleware
 
 ### Mid-term
 - [ ] Decision comparison (run two scenarios, compare reports side-by-side)
@@ -219,40 +236,23 @@ npm start
 
 ---
 
-## Bugs Fixed in This Version
-
-| # | Bug | Fix |
-|---|---|---|
-| 1 | Phase naming mismatch (progress bar stuck at 10%) | Unified to `welcome / questioning / analyzing / final` everywhere |
-| 2 | Dark mode FOUC + invisible text | Removed dark mode CSS block entirely (light-mode app) |
-| 3 | Empty streaming bubble during report generation | Shows animated "analyzing…" placeholder instead |
-| 4 | Sessions lost on page refresh | Full localStorage persistence on every state change |
-| 5 | MCQ buttons stay clickable after selection | `locked` prop with visual selected/greyed state |
-| 6 | No mobile sidebar | Hamburger menu + slide-in overlay |
-| 7 | No error retry | Retry button recovers last user message and resends automatically |
-| 8 | No textarea auto-focus | Auto-focuses on mount and after loading completes |
-| 9 | XSS via dangerouslySetInnerHTML | Replaced with safe React-based markdown renderer |
-| 10 | Race condition in sendMessage | Functional `setSession` updates + `useRef` for current session |
-| 11 | Choices with apostrophes broken | JSON.parse instead of fragile regex for CHOICES parsing |
-| 12 | Retry only cleared error, didn't resend | Now rolls back state and calls `sendMessage` with the original text |
-| 13 | No fetch timeout | 60-second `AbortController` timeout with clear error message |
-| 14 | Model forgets early context in long sessions | Memory injection after 10+ user messages |
-| 15 | Tailwind misses components/ and hooks/ | Content paths fixed in `tailwind.config.ts` |
-| 16 | Font loading broken (Geist vars unused) | Inter loaded cleanly via `next/font/google` |
-| 17 | Progress bar static per phase | Dynamic: `questionCount / totalQuestions` during questioning |
-| 18 | No message length validation | 8,000 char limit per message, 60 message limit per session |
-| 19 | Generic AI questions with no depth | Chain-of-thought, category-specific question banks, few-shot |
-| 20 | Score had no rubric (arbitrary numbers) | 5-tier rubric built into system prompt |
-
----
-
 ## Contributing
 
-PRs welcome. Key areas needing help:
-1. Rate limiting middleware (`src/middleware.ts`)
-2. PDF export for the decision report
-3. NextAuth integration (schema already exists in `prisma/schema.prisma`)
-4. E2E tests with Playwright
+We welcome community contributions! This project is evolving rapidly. Here are the main areas where contributors can jump in and make an immediate impact:
+
+### What We Need Help With:
+1. **PDF Export Functionality:** Add the ability for users to export their final `FinalReport.tsx` as a cleanly formatted PDF document. (Suggested tools: `jspdf` or `react-to-pdf`).
+2. **Shareable Public Links:** Create a dynamic route (e.g., `/report/[id]`) that allows users to generate a read-only public URL for their decision report to share with friends or mentors.
+3. **Email Integration:** Implement an endpoint using Resend or SendGrid to let users email their decision reports to themselves or others.
+4. **E2E Testing:** We need Playwright tests to cover the core chat flow, MCQ button selections, and the rendering of the final report.
+5. **UI/UX Polish:** Improve mobile responsiveness, add micro-animations to the chat interface, and refine the dark/light mode experience.
+6. **Localization:** Add support for more languages (Spanish, French, etc.) beyond the current English/Hindi implementation.
+
+### How to Contribute:
+- Fork the repository and create a feature branch (`git checkout -b feature/your-feature-name`).
+- Ensure your code follows the existing TypeScript and ESLint standards.
+- Test your changes locally to ensure no breaking changes.
+- Submit a Pull Request with a clear description of what you've added or fixed.
 
 ---
 
