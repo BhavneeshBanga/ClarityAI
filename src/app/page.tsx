@@ -86,9 +86,12 @@ export default function Page() {
   const {
     session, loading, history, dbReady,
     sendMessage, editMessage, branchFromMessage, lockChoice,
-    retryLastMessage, newSession, loadSessionById, deleteSession,
+    retryLastMessage, newSession, loadSessionById, deleteSession, renameSession,
     rateLimitHit,
   } = useChat();
+
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [editValue, setEditValue]   = useState('');
 
   const [showRateLimitBanner, setShowRateLimitBanner] = useState(true);
   const [input, setInput]             = useState('');
@@ -119,6 +122,24 @@ export default function Page() {
   const handleMCQSelect = (messageId: string, choice: string, choiceIndex: number) => {
     lockChoice(messageId, choiceIndex);
     sendMessage(choice);
+  };
+
+  const handleRename = (e: React.MouseEvent, id: string, currentTitle: string) => {
+    e.stopPropagation();
+    setEditingId(id);
+    setEditValue(currentTitle);
+  };
+
+  const handleSaveRename = async (id: string) => {
+    if (editValue.trim() && editValue !== history.find(h => h.id === id)?.title) {
+      await renameSession(id, editValue.trim());
+    }
+    setEditingId(null);
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter') handleSaveRename(id);
+    if (e.key === 'Escape') setEditingId(null);
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -204,11 +225,33 @@ export default function Page() {
         <div className="flex-1 overflow-y-auto px-3 space-y-0.5">
           {/* Active session */}
           <div
-            className="rounded-md px-2.5 py-1.5 text-[12px] font-medium flex items-center gap-1.5 cursor-default"
+            className="group/hist rounded-md px-2.5 py-1.5 text-[12px] font-medium flex items-center gap-1.5"
             style={{ background: '#eeeeff', color: '#4a4ab8' }}
           >
             {isBranch && <BranchIcon />}
-            <span className="truncate flex-1">{session.title}</span>
+            {editingId === session.id ? (
+              <input
+                autoFocus
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={() => handleSaveRename(session.id)}
+                onKeyDown={(e) => handleRenameKeyDown(e, session.id)}
+                className="flex-1 bg-white border border-[#c4c4fd] rounded px-1.5 py-0.5 text-[12px] outline-none"
+                style={{ color: '#333' }}
+              />
+            ) : (
+              <>
+                <span className="truncate flex-1">{session.title}</span>
+                <button
+                  onClick={(e) => handleRename(e, session.id, session.title)}
+                  className="opacity-0 group-hover/hist:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded shrink-0"
+                  style={{ color: '#4a4ab8' }}
+                  title="Rename session"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Past sessions */}
@@ -225,13 +268,40 @@ export default function Page() {
               {h.mode === 'mcq' && (
                 <span className="text-[9px] px-1 py-0.5 rounded font-bold shrink-0" style={{ background: '#eeeeff', color: '#5b5cf6' }}>MCQ</span>
               )}
-              <span className="truncate flex-1">{h.title}</span>
+              {editingId === h.id ? (
+                <input
+                  autoFocus
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleSaveRename(h.id)}
+                  onKeyDown={(e) => handleRenameKeyDown(e, h.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 bg-white border border-[#c4c4fd] rounded px-1.5 py-0.5 text-[12px] outline-none shadow-[0_0_0_2px_rgba(91,92,246,0.1)]"
+                  style={{ color: '#333' }}
+                />
+              ) : (
+                <>
+                  <span className="truncate flex-1">{h.title}</span>
+                  <button
+                    onClick={(e) => handleRename(e, h.id, h.title)}
+                    className="opacity-0 group-hover/hist:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded shrink-0"
+                    style={{ color: '#aaa' }}
+                    title="Rename session"
+                    onMouseEnter={e => (e.currentTarget.style.color = '#5b5cf6')}
+                    onMouseLeave={e => (e.currentTarget.style.color = '#aaa')}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                  </button>
+                </>
+              )}
               <button
                 onClick={(e) => handleDelete(e, h.id)}
                 disabled={deletingId === h.id}
                 className="opacity-0 group-hover/hist:opacity-100 transition-opacity w-5 h-5 flex items-center justify-center rounded shrink-0"
                 style={{ color: '#ccc' }}
                 title="Delete session"
+                onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#ccc')}
               >
                 {deletingId === h.id
                   ? <span className="text-[9px] animate-spin">◌</span>

@@ -120,7 +120,8 @@ async function fetchFullSession(id: string): Promise<Session | null> {
     if (!res.ok) return null;
     const data = await res.json();
     return data.session ?? null;
-  } catch {
+  } 
+  catch {
     return null;
   }
 }
@@ -414,6 +415,18 @@ export function useChat() {
     if (sessionRef.current.id === id) setSession(makeSession());
   }, []);
 
+  const renameSession = useCallback(async (id: string, newTitle: string) => {
+    await fetch(`/api/sessions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: newTitle }),
+    });
+    setHistory((prev) => prev.map((h) => h.id === id ? { ...h, title: newTitle } : h));
+    if (sessionRef.current.id === id) {
+      setSession((prev) => ({ ...prev, title: newTitle }));
+    }
+  }, []);
+
   return {
     session,
     loading,
@@ -427,6 +440,7 @@ export function useChat() {
     newSession,
     loadSessionById,
     deleteSession,
+    renameSession,
     rateLimitHit,
     setRateLimitHit,
   };

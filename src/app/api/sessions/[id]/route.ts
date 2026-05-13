@@ -85,3 +85,37 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true });
 }
+
+// PATCH /api/sessions/[id] — update session title
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const session = await auth();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { title } = await req.json();
+  if (!title || typeof title !== 'string' || title.trim().length === 0) {
+    return NextResponse.json({ error: 'Invalid title' }, { status: 400 });
+  }
+
+  const existing = await prisma.chatSession.findFirst({
+    where: { id, userId },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  await prisma.chatSession.update({
+    where: { id },
+    data: { title: title.trim() },
+  });
+
+  return NextResponse.json({ ok: true });
+}
