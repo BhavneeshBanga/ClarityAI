@@ -100,10 +100,123 @@ export default function Page() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
 
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [audioVisuals, setAudioVisuals] = useState<number[]>(Array(20).fill(10));
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const requestRef = useRef<number>(0);
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [session.messages]);
   useEffect(() => {
     if (!loading && textareaRef.current && session.phase !== 'final') textareaRef.current.focus();
   }, [loading, session.phase]);
+
+  const updateVisuals = () => {
+    if (!analyserRef.current) return;
+    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+    analyserRef.current.getByteFrequencyData(dataArray);
+    
+    const step = Math.floor(dataArray.length / 20);
+    const visuals = [];
+    for (let i = 0; i < 20; i++) {
+      visuals.push(Math.max(4, (dataArray[i * step] / 255) * 30));
+    }
+    setAudioVisuals(visuals);
+    requestRef.current = requestAnimationFrame(updateVisuals);
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const audioCtx = new AudioCtx();
+      audioContextRef.current = audioCtx;
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+      const source = audioCtx.createMediaStreamSource(stream);
+      source.connect(analyser);
+      sourceRef.current = source;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.start(100);
+      setIsRecording(true);
+      updateVisuals();
+    } catch (err) {
+      console.error('Microphone access denied:', err);
+      alert('Could not access microphone.');
+    }
+  };
+
+  const stopRecording = (submit: boolean) => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.onstop = async () => {
+        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+        if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        if (audioContextRef.current) audioContextRef.current.close();
+        
+        if (submit) {
+          setIsTranscribing(true);
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const formData = new FormData();
+          formData.append('file', audioBlob, 'recording.webm');
+          
+          try {
+            const res = await fetch('/api/transcribe', {
+              method: 'POST',
+              body: formData
+            });
+            const data = await res.json();
+            if (data.transcript) {
+              setInput(prev => prev ? prev + ' ' + data.transcript : data.transcript);
+              setTimeout(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = 'auto';
+                  textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 180) + 'px';
+                  textareaRef.current.focus();
+                }
+              }, 0);
+            } else if (data.error) {
+              alert('Transcription error: ' + data.error);
+            }
+          } catch (e) {
+            console.error(e);
+            alert('Failed to transcribe audio.');
+          } finally {
+            setIsTranscribing(false);
+          }
+        }
+      };
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        if (isRecording) {
+          stopRecording(true);
+        } else if (!isTranscribing && !loading && session.phase !== 'final' && !rateLimitHit) {
+          startRecording();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  });
 
   const handleSend = () => {
     if (input.trim() && !loading) { sendMessage(input); setInput(''); if (textareaRef.current) textareaRef.current.style.height = 'auto'; }
@@ -419,42 +532,84 @@ export default function Page() {
 
         {/* Input area */}
         <div className="px-4 py-3 flex items-end gap-2.5" style={{ borderTop: '1px solid rgba(10,10,15,0.07)' }}>
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            disabled={loading || session.phase === 'final' || rateLimitHit}
-            placeholder={
-              rateLimitHit              ? 'Rate limit reached. Please wait 48 hours...' :
-              session.phase === 'final' ? 'Session complete — start a new one to continue.' :
-              session.phase === 'welcome' ? 'Describe your big decision or challenge...' :
-              'Type your answer...'
-            }
-            rows={1}
-            style={{
-              flex: 1, resize: 'none', minHeight: 38, maxHeight: 180,
-              border: '1px solid rgba(10,10,15,0.12)',
-              borderRadius: 8, padding: '10px 14px',
-              fontSize: 13, color: '#0a0a0f',
-              background: '#ffffff',
-              outline: 'none',
-              fontFamily: 'inherit',
-              transition: 'border-color 0.15s',
-            }}
-            onFocus={e => (e.target.style.borderColor = '#5b5cf6')}
-            onBlur={e => (e.target.style.borderColor = 'rgba(10,10,15,0.12)')}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!canSend}
-            className="w-[34px] h-[34px] flex-shrink-0 rounded-lg flex items-center justify-center transition-all duration-200"
-            style={{ background: canSend ? '#5b5cf6' : 'rgba(10,10,15,0.08)' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 7h12M7 1l6 6-6 6" stroke={canSend ? '#fff' : 'rgba(10,10,15,0.3)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          {isRecording ? (
+            <div className="flex-1 flex items-center justify-between" style={{ minHeight: 38, border: '1px solid #5b5cf6', borderRadius: 8, padding: '10px 14px', background: '#f8f8ff' }}>
+              <div className="flex items-center gap-1.5 h-6 overflow-hidden">
+                {audioVisuals.map((h, i) => (
+                  <div key={i} className="w-1 rounded-full transition-all duration-75" style={{ background: '#5b5cf6', height: `${Math.max(4, h)}px` }} />
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={() => stopRecording(false)} title="Discard" className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-100 text-red-500 transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <button onClick={() => stopRecording(true)} title="Submit (Ctrl+Shift+D)" className="w-7 h-7 flex items-center justify-center rounded-full bg-green-500 hover:bg-green-600 text-white shadow-sm transition-colors">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                disabled={loading || session.phase === 'final' || rateLimitHit || isTranscribing}
+                placeholder={
+                  rateLimitHit              ? 'Rate limit reached. Please wait 48 hours...' :
+                  session.phase === 'final' ? 'Session complete — start a new one to continue.' :
+                  session.phase === 'welcome' ? 'Describe your big decision or challenge...' :
+                  isTranscribing ? 'Transcribing audio...' :
+                  'Type your answer...'
+                }
+                rows={1}
+                style={{
+                  flex: 1, resize: 'none', minHeight: 38, maxHeight: 180,
+                  border: '1px solid rgba(10,10,15,0.12)',
+                  borderRadius: 8, padding: '10px 14px',
+                  fontSize: 13, color: '#0a0a0f',
+                  background: '#ffffff',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.15s',
+                  opacity: isTranscribing ? 0.7 : 1,
+                }}
+                onFocus={e => (e.target.style.borderColor = '#5b5cf6')}
+                onBlur={e => (e.target.style.borderColor = 'rgba(10,10,15,0.12)')}
+              />
+              <button
+                onClick={startRecording}
+                disabled={loading || session.phase === 'final' || rateLimitHit || isTranscribing}
+                title="Dictate ctrl + shift + D"
+                className="w-[34px] h-[34px] flex-shrink-0 rounded-lg flex items-center justify-center transition-all duration-200 hover:bg-gray-100 group relative"
+                style={{ border: '1px solid rgba(10,10,15,0.12)' }}
+              >
+                {isTranscribing ? (
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-[#5b5cf6] border-t-transparent animate-spin" />
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b5cf6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="22" />
+                  </svg>
+                )}
+              </button>
+            </>
+          )}
+
+          {!isRecording && (
+            <button
+              onClick={handleSend}
+              disabled={!canSend}
+              className="w-[34px] h-[34px] flex-shrink-0 rounded-lg flex items-center justify-center transition-all duration-200"
+              style={{ background: canSend ? '#5b5cf6' : 'rgba(10,10,15,0.08)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M1 7h12M7 1l6 6-6 6" stroke={canSend ? '#fff' : 'rgba(10,10,15,0.3)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Rate limit banner */}

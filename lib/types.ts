@@ -1,5 +1,12 @@
-export type Phase = 'welcome' | 'questioning' | 'analyzing' | 'final';
-export type MessageRole = 'user' | 'assistant';
+export type Phase =
+  | 'welcome' 
+  | 'questioning' 
+  | 'analyzing'
+  | 'final';
+
+export type MessageRole = 
+  |'user' 
+  | 'assistant';
 
 export interface Message {
   id: string;

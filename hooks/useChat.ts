@@ -23,12 +23,18 @@ function parseChoices(content: string): {
   allowCustom: boolean;
 } {
   const match = content.match(/\nCHOICES:\s*(\[[\s\S]*?\])\s*$/m);
-  if (!match) return { text: content.trim(), choices: [], allowCustom: false };
+  if (!match) return { 
+    text: content.trim(), 
+    choices: [], 
+    allowCustom: false 
+  };
+    
 
   let choices: string[] = [];
   try {
     choices = JSON.parse(match[1]);
-  } catch {
+  } 
+  catch {
     const regex = /"([^"\\]*(\\.[^"\\]*)*)"/g;
     let m: RegExpExecArray | null;
     while ((m = regex.exec(match[1])) !== null) choices.push(m[1].replace(/\\"/g, '"'));
@@ -87,7 +93,8 @@ async function persistSession(session: Session): Promise<void> {
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(session),
     });
-  } catch (e) {
+  } 
+  catch (e) {
     console.error('Failed to persist session:', e);
   }
 }
@@ -109,7 +116,8 @@ async function fetchSessionList(): Promise<SessionSummary[]> {
       createdAt:    new Date(s.createdAt).getTime(),
       messageCount: s._count.messages,
     }));
-  } catch {
+  } 
+  catch {
     return [];
   }
 }
@@ -224,7 +232,8 @@ export function useChat() {
           }),
           signal: controller.signal,
         });
-      } finally {
+      } 
+      finally {
         clearTimeout(timeoutId);
       }
 
@@ -284,7 +293,8 @@ export function useChat() {
             m.id === aiMessageId ? { ...m, content: streamedResponse, isReport: true } : m
           ),
         }));
-      } else {
+      } 
+      else {
         const { text, choices, allowCustom } = parseChoices(streamedResponse);
         setSession((prev) => {
           const newMessages = prev.messages.map((m) =>
@@ -295,7 +305,8 @@ export function useChat() {
           return { ...prev, messages: newMessages, questionCount: countQuestions(newMessages), phase: 'questioning' };
         });
       }
-    } catch (error: unknown) {
+    } 
+    catch (error: unknown) {
       setSession((prev) => {
         const withoutEmpty = prev.messages.filter((m) => m.content !== '' || m.role === 'user');
         return {
@@ -312,7 +323,8 @@ export function useChat() {
           ],
         };
       });
-    } finally {
+    } 
+    finally {
       setLoading(false);
     }
   }, [loading]);
@@ -344,7 +356,9 @@ export function useChat() {
     if (msgIdx < 0) return;
 
     const branchMessages = messages.slice(0, msgIdx + 1).map((m) => ({
-      ...m, id: nanoid(), selectedChoice: undefined,
+      ...m, 
+      id: nanoid(), 
+      selectedChoice: undefined,
     }));
 
     const parentTitle    = sessionRef.current.title;
@@ -414,6 +428,8 @@ export function useChat() {
     // If we deleted the current session, start fresh
     if (sessionRef.current.id === id) setSession(makeSession());
   }, []);
+
+  // ── renameSession ─────────────────────────────────────────────────────────
 
   const renameSession = useCallback(async (id: string, newTitle: string) => {
     await fetch(`/api/sessions/${id}`, {
