@@ -43,9 +43,15 @@ export async function transcribeAudio(audioBuffer: Buffer, filename: string = 'a
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error('Sarvam STT Error:', error);
-    throw new Error(`Sarvam STT API error: ${response.status} — ${error}`);
+    const errorText = await response.text();
+    console.error('Sarvam STT Error:', errorText);
+    let errorMsg = errorText;
+    try {
+      const parsed = JSON.parse(errorText);
+      if (parsed.error?.message) errorMsg = parsed.error.message;
+      else if (parsed.message) errorMsg = parsed.message;
+    } catch (_) {}
+    throw new Error(`Sarvam STT API error: ${response.status} — ${errorMsg}`);
   }
 
   const data = await response.json();

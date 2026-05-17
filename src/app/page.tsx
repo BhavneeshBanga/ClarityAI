@@ -12,17 +12,17 @@ import Image from 'next/image';
 // ─── Phase config ─────────────────────────────────────────────────────────────
 
 const PHASE_LABELS: Record<string, string> = {
-  welcome:     'Getting Started',
+  welcome: 'Getting Started',
   questioning: 'Gathering Clarity',
-  analyzing:   'Analyzing Responses',
-  final:       'Report Complete',
+  analyzing: 'Analyzing Responses',
+  final: 'Report Complete',
 };
 
 const PHASE_ICONS: Record<string, string> = {
-  welcome:     '👋',
+  welcome: '👋',
   questioning: '🔍',
-  analyzing:   '⚡',
-  final:       '✅',
+  analyzing: '⚡',
+  final: '✅',
 };
 
 // ─── Markdown renderer ────────────────────────────────────────────────────────
@@ -90,19 +90,20 @@ export default function Page() {
     rateLimitHit,
   } = useChat();
 
-  const [editingId, setEditingId]   = useState<string | null>(null);
-  const [editValue, setEditValue]   = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState('');
 
   const [showRateLimitBanner, setShowRateLimitBanner] = useState(true);
-  const [input, setInput]             = useState('');
+  const [input, setInput] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef    = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [audioVisuals, setAudioVisuals] = useState<number[]>(Array(20).fill(10));
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
+  const [audioVisuals, setAudioVisuals] = useState<number[]>(Array(30).fill(10));
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -119,10 +120,10 @@ export default function Page() {
     if (!analyserRef.current) return;
     const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(dataArray);
-    
-    const step = Math.floor(dataArray.length / 20);
+
+    const step = Math.floor(dataArray.length / 80);
     const visuals = [];
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 80; i++) {
       visuals.push(Math.max(4, (dataArray[i * step] / 255) * 30));
     }
     setAudioVisuals(visuals);
@@ -155,7 +156,7 @@ export default function Page() {
       updateVisuals();
     } catch (err) {
       console.error('Microphone access denied:', err);
-      alert('Could not access microphone.');
+      setTranscriptionError('Could not access microphone. Please check your browser permissions.');
     }
   };
 
@@ -165,13 +166,13 @@ export default function Page() {
         mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
         if (audioContextRef.current) audioContextRef.current.close();
-        
+
         if (submit) {
           setIsTranscribing(true);
           const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
           const formData = new FormData();
           formData.append('file', audioBlob, 'recording.webm');
-          
+
           try {
             const res = await fetch('/api/transcribe', {
               method: 'POST',
@@ -187,12 +188,14 @@ export default function Page() {
                   textareaRef.current.focus();
                 }
               }, 0);
-            } else if (data.error) {
-              alert('Transcription error: ' + data.error);
             }
-          } catch (e) {
+            else if (data.error) {
+              setTranscriptionError(data.error);
+            }
+          }
+          catch (e) {
             console.error(e);
-            alert('Failed to transcribe audio.');
+            setTranscriptionError('Failed to transcribe audio.');
           } finally {
             setIsTranscribing(false);
           }
@@ -264,19 +267,19 @@ export default function Page() {
 
   const getProgress = (): number => {
     switch (session.phase) {
-      case 'welcome':     return 5;
+      case 'welcome': return 5;
       case 'questioning': return Math.min(80, 10 + (session.questionCount / session.totalQuestions) * 70);
-      case 'analyzing':   return 88;
-      case 'final':       return 100;
-      default:            return 5;
+      case 'analyzing': return 88;
+      case 'final': return 100;
+      default: return 5;
     }
   };
 
   const phaseLabel = PHASE_LABELS[session.phase] ?? session.phase;
-  const phaseIcon  = PHASE_ICONS[session.phase]  ?? '💬';
-  const progress   = getProgress();
-  const isBranch   = !!session.branchedFrom;
-  const user       = authSession?.user;
+  const phaseIcon = PHASE_ICONS[session.phase] ?? '💬';
+  const progress = getProgress();
+  const isBranch = !!session.branchedFrom;
+  const user = authSession?.user;
 
   const canSend = input.trim() && !loading && session.phase !== 'final' && !rateLimitHit;
 
@@ -447,9 +450,9 @@ export default function Page() {
               style={{ color: '#bbb' }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </button>
           </div>
@@ -533,22 +536,98 @@ export default function Page() {
         {/* Input area */}
         <div className="px-4 py-3 flex items-end gap-2.5" style={{ borderTop: '1px solid rgba(10,10,15,0.07)' }}>
           {isRecording ? (
-            <div className="flex-1 flex items-center justify-between" style={{ minHeight: 38, border: '1px solid #5b5cf6', borderRadius: 8, padding: '10px 14px', background: '#f8f8ff' }}>
-              <div className="flex items-center gap-1.5 h-6 overflow-hidden">
+            <div
+              className="flex-1 flex items-center gap-2.5"
+              style={{
+                minHeight: 46,
+                border: '1.5px solid #5b5cf6',
+                borderRadius: 10,
+                padding: '8px 12px',
+                background: '#f8f8ff',
+              }}
+            >
+              {/* REC dot */}
+              <span
+                style={{
+                  width: 8, height: 8,
+                  borderRadius: '50%',
+                  background: '#ef4444',
+                  flexShrink: 0,
+                  animation: 'pulse-rec-dot 1.2s ease-in-out infinite',
+                  display: 'inline-block',
+                }}
+              />
+
+              {/* REC label */}
+              <span style={{ fontSize: 12, color: '#5b5cf6', fontWeight: 500, flexShrink: 0, letterSpacing: '0.01em' }}>
+                REC
+              </span>
+
+              {/* Waveform bars */}
+              <div className="flex-1 flex items-center gap-[2px] h-7 overflow-hidden">
                 {audioVisuals.map((h, i) => (
-                  <div key={i} className="w-1 rounded-full transition-all duration-75" style={{ background: '#5b5cf6', height: `${Math.max(4, h)}px` }} />
+                  <div
+                    key={i}
+                    className="flex-1 rounded-full transition-all duration-75"
+                    style={{
+                      background: '#5b5cf6',
+                      height: `${Math.max(3, h * 0.9)}px`,
+                      minWidth: 2,
+                      maxWidth: 6,
+                      opacity: 0.85,
+                    }}
+                  />
                 ))}
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => stopRecording(false)} title="Discard" className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-100 text-red-500 transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-                <button onClick={() => stopRecording(true)} title="Submit (Ctrl+Shift+D)" className="w-7 h-7 flex items-center justify-center rounded-full bg-green-500 hover:bg-green-600 text-white shadow-sm transition-colors">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                </button>
-              </div>
+
+              {/* Timer */}
+              <span style={{ fontSize: 12, color: '#888', fontVariantNumeric: 'tabular-nums', flexShrink: 0, minWidth: 32, textAlign: 'right' }}>
+                {/* optional: add a timer state if needed */}
+              </span>
+
+              {/* Divider */}
+              <div style={{ width: 1, height: 22, background: 'rgba(91,92,246,0.18)', flexShrink: 0 }} />
+
+              {/* Discard button */}
+              <button
+                onClick={() => stopRecording(false)}
+                title="Discard"
+                style={{
+                  width: 30, height: 30,
+                  borderRadius: '50%',
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  border: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+
+              {/* Submit button */}
+              <button
+                onClick={() => stopRecording(true)}
+                title="Submit (Ctrl+Shift+D)"
+                style={{
+                  width: 30, height: 30,
+                  borderRadius: '50%',
+                  background: '#22c55e',
+                  color: '#fff',
+                  border: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </button>
             </div>
           ) : (
+            // ... baaki wala textarea block same rahega
             <>
               <textarea
                 ref={textareaRef}
@@ -557,11 +636,11 @@ export default function Page() {
                 onKeyDown={handleKeyDown}
                 disabled={loading || session.phase === 'final' || rateLimitHit || isTranscribing}
                 placeholder={
-                  rateLimitHit              ? 'Rate limit reached. Please wait 48 hours...' :
-                  session.phase === 'final' ? 'Session complete — start a new one to continue.' :
-                  session.phase === 'welcome' ? 'Describe your big decision or challenge...' :
-                  isTranscribing ? 'Transcribing audio...' :
-                  'Type your answer...'
+                  rateLimitHit ? 'Rate limit reached. Please wait 48 hours...' :
+                    session.phase === 'final' ? 'Session complete — start a new one to continue.' :
+                      session.phase === 'welcome' ? 'Describe your big decision or challenge...' :
+                        isTranscribing ? 'Transcribing audio...' :
+                          'Type your answer...'
                 }
                 rows={1}
                 style={{
@@ -623,18 +702,45 @@ export default function Page() {
                 title="Close"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
               <div className="mb-3.5 p-2.5 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
               </div>
               <h3 className="text-[17px] font-bold mb-2" style={{ color: '#7f1d1d' }}>Limit Reached</h3>
               <p className="text-[13.5px] leading-relaxed" style={{ color: '#b91c1c' }}>
                 You have used your 2 free complete chats. Please wait <strong>48 hours</strong> from your first chat to continue.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Transcription Error Modal */}
+        {transcriptionError && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-none">
+            <div className="shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl p-6 w-full max-w-sm flex flex-col items-center text-center animate-fade-in-up relative pointer-events-auto" style={{ background: '#fff8f8', border: '1px solid rgba(220,38,38,0.15)' }}>
+              <button
+                onClick={() => setTranscriptionError(null)}
+                className="absolute top-3.5 right-3.5 rounded-full p-1.5 transition-colors"
+                style={{ color: '#dc2626', background: '#fee2e2' }}
+                title="Close"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+              <div className="mb-3.5 p-2.5 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
+              <h3 className="text-[17px] font-bold mb-2" style={{ color: '#7f1d1d' }}>Transcription Error</h3>
+              <p className="text-[13.5px] leading-relaxed" style={{ color: '#b91c1c' }}>
+                {transcriptionError}
               </p>
             </div>
           </div>
@@ -675,9 +781,9 @@ function MessageBubble({
   onEditMessage: (messageId: string, newContent: string) => void;
   onBranchFrom: (messageId: string) => void;
 }) {
-  const canEdit   = msg.role === 'user' && !loading && session.phase !== 'final';
+  const canEdit = msg.role === 'user' && !loading && session.phase !== 'final';
   const canBranch = msg.role === 'assistant' && !msg.isError && !msg.isReport &&
-                    msg.content.length > 0 && msgIdx < totalMessages - 1 && !loading;
+    msg.content.length > 0 && msgIdx < totalMessages - 1 && !loading;
 
   return (
     <div className={`flex gap-2.5 animate-fade-in-up ${msg.role === 'user' ? 'justify-end flex-row-reverse' : 'justify-start'} max-w-[92%] ${msg.role === 'user' ? 'ml-auto' : ''}`}>
@@ -698,7 +804,7 @@ function MessageBubble({
           <div className="group/aimsg relative">
             {msg.isError ? (
               <div className="text-[13px] leading-relaxed px-3.5 py-2.5 rounded-[2px_10px_10px_10px] flex items-center gap-2.5" style={{ background: '#fff5f5', border: '1px solid rgba(220,38,38,0.15)', color: '#dc2626' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
                 <span>{msg.content}</span>
                 <button
                   onClick={onRetry}
