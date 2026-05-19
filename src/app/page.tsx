@@ -215,6 +215,14 @@ export default function Page() {
         } else if (!isTranscribing && !loading && session.phase !== 'final' && !rateLimitHit) {
           startRecording();
         }
+      } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'o') {
+        e.preventDefault();
+        newSession('standard');
+        setSidebarOpen(false);
+      } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        newSession('mcq');
+        setSidebarOpen(false);
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
@@ -315,19 +323,29 @@ export default function Page() {
         <div className="px-3 mb-3 flex flex-col gap-2">
           <button
             onClick={() => { newSession('standard'); setSidebarOpen(false); }}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] transition-colors"
+            className="group w-full flex items-center justify-between rounded-lg px-3 py-2 text-[12.5px] transition-colors"
             style={{ border: '1px solid rgba(10,10,15,0.1)', background: '#ffffff', color: '#555' }}
           >
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-            New session
+            <div className="flex items-center gap-2">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+              New session
+            </div>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] tracking-wider font-medium px-1.5 py-0.5 rounded" style={{ background: '#f5f5f5', color: '#888', border: '1px solid #e5e5e5' }}>
+              CTRL+SHIFT+O
+            </span>
           </button>
           <button
             onClick={() => { newSession('mcq'); setSidebarOpen(false); }}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors"
+            className="group w-full flex items-center justify-between rounded-lg px-3 py-2 text-[12.5px] font-medium transition-colors"
             style={{ border: '1px solid #c4c4fd', background: '#eeeeff', color: '#4a4ab8' }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
-            New MCQ session
+            <div className="flex items-center gap-2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+              New MCQ session
+            </div>
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[9px] tracking-wider font-bold px-1.5 py-0.5 rounded" style={{ background: '#e0e0ff', color: '#5b5cf6', border: '1px solid #c4c4fd' }}>
+              CTRL+SHIFT+P
+            </span>
           </button>
         </div>
 
