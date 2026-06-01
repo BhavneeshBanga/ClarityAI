@@ -1,7 +1,7 @@
 # ClarityAI — AI-Powered Decision Advisor
 
 > Think through your biggest decisions with the clarity of a McKinsey consultant, the empathy of a therapist, and the directness of a seasoned entrepreneur — in minutes, not months.
-
+ 
 ---
 
 ## What ClarityAI Does For You
@@ -16,7 +16,7 @@ ClarityAI is not a chatbot. It is a structured decision-making engine. You descr
 
 | You are | Example use case |
 |---|---|
-| A professional facing a career change | "Should I leave my ₹40L job at a startup for a ₹70L offer at a MNC?" |
+| A professional facing a career change | "Should I leave my ₹40L job at a startup for  a ₹70L offer at a MNC?" |
 | A founder making a startup decision | "Should I take VC funding or stay bootstrapped?" |
 | Someone evaluating a major investment | "Should I put ₹50L into real estate or equity?" |
 | A person navigating a relationship decision | "Should I move cities for my partner?" |
