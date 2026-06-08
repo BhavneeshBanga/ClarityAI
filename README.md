@@ -12,7 +12,8 @@ ClarityAI is not a chatbot. It is a structured decision-making engine. You descr
 
 ---
 
-## Who This Is For
+## Who This Is For 
+
 
 | You are | Example use case |
 |---|---|
